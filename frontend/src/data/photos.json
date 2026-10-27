@@ -1,0 +1,11 @@
+{
+  "_note": "Free photos from Unsplash (Unsplash License: free to use, attribution appreciated). `id` is the images.unsplash.com photo id; `source` is where it was found.",
+  "chicken-biryani": { "id": "photo-1589302168068-964664d93dc0", "source": "https://unsplash.com/s/photos/chicken-biryani" },
+  "dal-makhani": { "id": "photo-1727280018679-def2652a4575", "source": "https://unsplash.com/photos/dal-makhani-in-black-pot-WR13Tw8gmsA" },
+  "paneer-tikka": { "id": "photo-1757715376287-90f24dac4593", "source": "https://unsplash.com/photos/a-delicious-dish-of-paneer-tikka-with-fresh-mint-leaves-1Dr-a-fgPAg" },
+  "chicken-bowl": { "id": "photo-1646487793655-bbf280273d2f", "source": "https://unsplash.com/s/photos/salad-bowl" },
+  "green-salad": { "id": "photo-1572449043416-55f4685c9bb7", "source": "https://unsplash.com/photos/green-salad-on-a-black-bowl-bBzjWthTqb8" },
+  "margherita": { "id": "photo-1589187151053-5ec8818e661b", "source": "https://unsplash.com/photos/pizza-on-blue-ceramic-plate-frTrM7Gdkho" },
+  "masala-dosa": { "id": "photo-1694849789325-914b71ab4075", "source": "https://unsplash.com/photos/dosa-with-chutney-and-sambar-breakfast-VIqcVqZ1uxM" },
+  "cold-coffee": { "id": "photo-1765896728615-a79bbe0f0727", "source": "https://unsplash.com/photos/iced-coffee-with-cream-and-coffee-beans-IsRjIDiXn58" }
+}

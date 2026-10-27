@@ -1,0 +1,156 @@
+@import "tailwindcss";
+
+/*
+ * Hunch design tokens. Source of truth: docs/design/HUNCH_DESIGN.md
+ * Two colour families only (Indigo + Graphite). Tailwind's default palette,
+ * radii and shadows are cleared so nothing else can sneak in.
+ */
+@theme {
+  --color-*: initial;
+  --color-white: #ffffff;
+  --color-black: #000000;
+
+  /* Indigo — brand. Mostly 50–200; 500+ at most once per screen. */
+  --color-indigo-50: #f2f5ff;
+  --color-indigo-100: #e5ebff;
+  --color-indigo-200: #ccd7ff;
+  --color-indigo-300: #a8bbff;
+  --color-indigo-400: #7f97ff;
+  --color-indigo-500: #5872f5;
+  --color-indigo-600: #4357e0;
+  --color-indigo-700: #3644bd;
+  --color-indigo-800: #2e3a96;
+  --color-indigo-900: #262f70;
+
+  /* Graphite — neutral. 25 is the app background, 0 is every surface on it. */
+  --color-graphite-0: #ffffff;
+  --color-graphite-25: #fafafa;
+  --color-graphite-50: #f4f4f5;
+  --color-graphite-100: #ebebed;
+  --color-graphite-200: #dcdce0;
+  --color-graphite-300: #c4c4ca;
+  --color-graphite-400: #9e9ea6;
+  --color-graphite-500: #76767f;
+  --color-graphite-600: #58585f;
+  --color-graphite-700: #424248;
+  --color-graphite-800: #2a2a2f;
+  --color-graphite-900: #18181b;
+
+  /* Functional only. Never decorative. */
+  --color-veg: #1e8e4e;
+  --color-nonveg: #8b3a1c;
+  --color-error: #c8372d;
+
+  --font-sans: "Geist Variable", "Helvetica Neue", system-ui, sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, "SF Mono", Menlo, monospace;
+  --font-hindi: "Mukta", "Noto Sans Devanagari", sans-serif;
+
+  /* Type scale */
+  --text-display: 40px;
+  --text-display--line-height: 44px;
+  --text-display--letter-spacing: -0.02em;
+  --text-display--font-weight: 600;
+  --text-title: 28px;
+  --text-title--line-height: 34px;
+  --text-title--letter-spacing: -0.015em;
+  --text-title--font-weight: 600;
+  --text-heading: 20px;
+  --text-heading--line-height: 26px;
+  --text-heading--letter-spacing: -0.01em;
+  --text-heading--font-weight: 600;
+  --text-body: 16px;
+  --text-body--line-height: 24px;
+  --text-label: 14px;
+  --text-label--line-height: 20px;
+  --text-label--font-weight: 500;
+  --text-caption: 12px;
+  --text-caption--line-height: 16px;
+  --text-caption--font-weight: 500;
+  --text-numeric: 14px;
+  --text-numeric--line-height: 20px;
+
+  --radius-*: initial;
+  --radius-xs: 8px;
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+  --radius-full: 9999px;
+
+  --shadow-*: initial;
+  --shadow-e1: 0 1px 2px rgb(24 24 27 / 0.04), 0 4px 12px rgb(24 24 27 / 0.04);
+  --shadow-e2: 0 12px 32px -12px rgb(24 24 27 / 0.14);
+  --shadow-e3: 0 24px 48px -16px rgb(24 24 27 / 0.2);
+  --shadow-orb: 0 10px 24px -12px rgb(88 114 245 / 0.55), inset 0 0 0 1px rgb(88 114 245 / 0.12);
+
+  --animate-shimmer: shimmer 2.2s linear infinite;
+  --animate-ring: ring 1.8s ease-out infinite;
+
+  @keyframes shimmer {
+    from { background-position: 100% 0; }
+    to { background-position: -150% 0; }
+  }
+  @keyframes ring {
+    from { transform: scale(0.9); opacity: 1; }
+    to { transform: scale(1.35); opacity: 0; }
+  }
+}
+
+/* The three allowed gradients */
+/* Indigo 50 fading out. Sits on white surfaces or the #FAFAFA canvas alike. */
+@utility bg-wash {
+  background-image: radial-gradient(120% 80% at 50% 0%, var(--color-indigo-50) 0%, rgb(242 245 255 / 0) 62%);
+}
+@utility bg-orb {
+  background-image: radial-gradient(circle at 34% 28%, var(--color-indigo-50) 0%, var(--color-indigo-200) 48%, var(--color-indigo-400) 100%);
+}
+@utility text-shimmer {
+  background-image: linear-gradient(90deg, var(--color-graphite-500) 0%, var(--color-graphite-500) 35%, var(--color-indigo-500) 50%, var(--color-graphite-500) 65%, var(--color-graphite-500) 100%);
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: var(--animate-shimmer);
+}
+
+/* Frost material: Island and composer floating over content */
+@utility frost {
+  background-color: rgb(255 255 255 / 0.78);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  backdrop-filter: blur(20px) saturate(1.4);
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    text-size-adjust: 100%;
+  }
+  body {
+    background: var(--color-graphite-25);
+    color: var(--color-graphite-900);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: var(--text-body--line-height);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-indigo-400);
+    outline-offset: 3px;
+  }
+  ::selection {
+    background: var(--color-indigo-100);
+  }
+  :lang(hi) {
+    font-family: var(--font-hindi);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
