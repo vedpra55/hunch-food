@@ -1,11 +1,107 @@
 {
   "_note": "Free photos from Unsplash (Unsplash License: free to use, attribution appreciated). `id` is the images.unsplash.com photo id; `source` is where it was found.",
-  "chicken-biryani": { "id": "photo-1589302168068-964664d93dc0", "source": "https://unsplash.com/s/photos/chicken-biryani" },
-  "dal-makhani": { "id": "photo-1727280018679-def2652a4575", "source": "https://unsplash.com/photos/dal-makhani-in-black-pot-WR13Tw8gmsA" },
-  "paneer-tikka": { "id": "photo-1757715376287-90f24dac4593", "source": "https://unsplash.com/photos/a-delicious-dish-of-paneer-tikka-with-fresh-mint-leaves-1Dr-a-fgPAg" },
-  "chicken-bowl": { "id": "photo-1646487793655-bbf280273d2f", "source": "https://unsplash.com/s/photos/salad-bowl" },
-  "green-salad": { "id": "photo-1572449043416-55f4685c9bb7", "source": "https://unsplash.com/photos/green-salad-on-a-black-bowl-bBzjWthTqb8" },
-  "margherita": { "id": "photo-1589187151053-5ec8818e661b", "source": "https://unsplash.com/photos/pizza-on-blue-ceramic-plate-frTrM7Gdkho" },
-  "masala-dosa": { "id": "photo-1694849789325-914b71ab4075", "source": "https://unsplash.com/photos/dosa-with-chutney-and-sambar-breakfast-VIqcVqZ1uxM" },
-  "cold-coffee": { "id": "photo-1765896728615-a79bbe0f0727", "source": "https://unsplash.com/photos/iced-coffee-with-cream-and-coffee-beans-IsRjIDiXn58" }
+  "chicken-biryani": {
+    "id": "photo-1589302168068-964664d93dc0",
+    "source": "https://unsplash.com/s/photos/chicken-biryani"
+  },
+  "dal-makhani": {
+    "id": "photo-1727280018679-def2652a4575",
+    "source": "https://unsplash.com/photos/dal-makhani-in-black-pot-WR13Tw8gmsA"
+  },
+  "paneer-tikka": {
+    "id": "photo-1757715376287-90f24dac4593",
+    "source": "https://unsplash.com/photos/a-delicious-dish-of-paneer-tikka-with-fresh-mint-leaves-1Dr-a-fgPAg"
+  },
+  "chicken-bowl": {
+    "id": "photo-1646487793655-bbf280273d2f",
+    "source": "https://unsplash.com/s/photos/salad-bowl"
+  },
+  "green-salad": {
+    "id": "photo-1572449043416-55f4685c9bb7",
+    "source": "https://unsplash.com/photos/green-salad-on-a-black-bowl-bBzjWthTqb8"
+  },
+  "margherita": {
+    "id": "photo-1589187151053-5ec8818e661b",
+    "source": "https://unsplash.com/photos/pizza-on-blue-ceramic-plate-frTrM7Gdkho"
+  },
+  "masala-dosa": {
+    "id": "photo-1694849789325-914b71ab4075",
+    "source": "https://unsplash.com/photos/dosa-with-chutney-and-sambar-breakfast-VIqcVqZ1uxM"
+  },
+  "cold-coffee": {
+    "id": "photo-1765896728615-a79bbe0f0727",
+    "source": "https://unsplash.com/photos/iced-coffee-with-cream-and-coffee-beans-IsRjIDiXn58"
+  },
+  "mutton-biryani": {
+    "id": "photo-1631515243349-e0cb75fb8d3a",
+    "source": "https://unsplash.com/s/photos/mutton-biryani"
+  },
+  "butter-chicken": {
+    "id": "photo-1742599361498-79824d24e355",
+    "source": "https://unsplash.com/photos/delicious-indian-butter-chicken-served-with-rice-8zLfugmjMLc"
+  },
+  "rajma-chawal": {
+    "id": "photo-1788601988466-9f361c34c6cb",
+    "source": "https://unsplash.com/s/photos/rajma"
+  },
+  "chole-bhature": {
+    "id": "photo-1676976197340-be65999b7516",
+    "source": "https://unsplash.com/photos/chana-masala-with-fried-bhatura-bread-Idh9dnG2v8w"
+  },
+  "chicken-tikka": {
+    "id": "photo-1755090154782-5215189b4083",
+    "source": "https://unsplash.com/photos/chicken-tikka-skewers-served-in-a-cast-iron-pan-A7G7eTQb5Dc"
+  },
+  "masala-omelette": {
+    "id": "photo-1677844592730-ce9c936d8f1a",
+    "source": "https://unsplash.com/photos/a-white-plate-topped-with-an-omelet-and-greens-SCZP5rvZINk"
+  },
+  "tomato-soup": {
+    "id": "photo-1673021889619-0677506b56ac",
+    "source": "https://unsplash.com/photos/a-bowl-of-tomato-soup-with-croutons-and-spinach-8q13bAl89uQ"
+  },
+  "fruit-bowl": {
+    "id": "photo-1506395308321-904a71783d60",
+    "source": "https://unsplash.com/photos/assorted-fruits-in-bowl-AgD6OBNXF0Q"
+  },
+  "pepperoni": {
+    "id": "photo-1755554042276-267bdcbe1104",
+    "source": "https://unsplash.com/photos/a-pepperoni-pizza-with-a-drizzle-of-white-sauce-TG5SPYNvpos"
+  },
+  "idli-vada": {
+    "id": "photo-1756757077703-26dc3ba7e853",
+    "source": "https://unsplash.com/photos/idlis-with-various-chutneys-and-sambar-on-a-banana-leaf-WKLEP0uk6yI"
+  },
+  "filter-coffee": {
+    "id": "photo-1757918391899-1341f7b285fb",
+    "source": "https://unsplash.com/photos/a-small-metal-cup-filled-with-foamy-beverage-Gi7G-zkWaOA"
+  },
+  "masala-chai": {
+    "id": "photo-1761483281417-778013dc0177",
+    "source": "https://unsplash.com/s/photos/masala-chai"
+  },
+  "veg-momos": {
+    "id": "photo-1784550346608-11efc581d6d7",
+    "source": "https://unsplash.com/photos/steamed-momos-and-dipping-sauce-served-on-a-white-plate-uY1ijms9wMI"
+  },
+  "chicken-momos": {
+    "id": "photo-1590232390074-fe2885c44818",
+    "source": "https://unsplash.com/photos/plates-of-momos-and-dipping-sauce-on-a-blue-surface-1R7E8Ah8gG0"
+  },
+  "gulab-jamun": {
+    "id": "photo-1593701461250-d7b22dfd3a77",
+    "source": "https://unsplash.com/s/photos/gulab-jamun"
+  },
+  "veg-thali": {
+    "id": "photo-1742281257707-0c7f7e5ca9c6",
+    "source": "https://unsplash.com/photos/indian-thalis-with-rice-and-a-variety-of-dishes-adzbTddUg68"
+  },
+  "vrat-thali": {
+    "id": "photo-1680359873864-43e89bf248ac",
+    "source": "https://unsplash.com/s/photos/veg-thali"
+  },
+  "rose-milk": {
+    "id": "photo-1692620609860-be6717812f71",
+    "source": "https://unsplash.com/s/photos/rose-milk"
+  }
 }
