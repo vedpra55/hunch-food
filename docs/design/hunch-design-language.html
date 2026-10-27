@@ -1,461 +1,507 @@
-<title>Hunch Design Language</title>
+<title>Hunch Foundations</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Instrument+Sans:wght@400..700&family=Geist+Mono:wght@400..600&family=Mukta:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Mukta:wght@400;600&display=swap">
 <style>
-/* Layout: one warm canvas; Hunch is the hero, screens sit in a wrapping gallery, specs follow in quiet bands. Light mode only, by design. */
+/* Layout: a quiet spec sheet. Neutral canvas, white specimen surfaces, one brand hue used sparingly. Light only, by design. */
 :root{
-  --canvas:#FAF9F6; --surface:#FFFFFF; --ink:#1A1611; --ink-2:#6E665B; --ink-3:#ABA398; --tint:#F2EFEA;
-  --saffron:#FF9F1C; --chili:#F2542D; --gold:#E9A800; --gold-ink:#8A6200; --basil:#1F9D55; --basil-ink:#167A42;
-  --lagoon:#2F7CF0; --lagoon-ink:#1D5BC2; --lavender:#8B7CF2; --lavender-ink:#5B4BCF; --indigo:#3D3A8C;
-  --masala:linear-gradient(120deg,#FFB547 0%,#FF6A3D 50%,#E2366E 100%);
-  --shadow-soft:0 18px 40px -22px rgba(26,22,17,.28);
-  --f-display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
-  --f-ui:"Instrument Sans", "Helvetica Neue", system-ui, sans-serif;
-  --f-mono:"Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
-  --f-hi:"Mukta", "Noto Sans Devanagari", sans-serif;
-  --r-sm:12px; --r-md:20px; --r-lg:28px;
+  --p50:#FFF7F2; --p100:#FFEDE2; --p200:#FFDCC8; --p300:#FFC2A2; --p400:#FFA273;
+  --p500:#F57F48; --p600:#DC6431; --p700:#B54C22; --p800:#8A3A1B; --p900:#5E2812;
+  --s0:#FFFFFF; --s25:#FBFAF9; --s50:#F5F4F2; --s100:#ECEAE7; --s200:#DEDBD6; --s300:#C5C1BB;
+  --s400:#A09B94; --s500:#7A756E; --s600:#5C5852; --s700:#45413C; --s800:#2B2825; --s900:#1A1816;
+  --veg:#1E8E4E; --nonveg:#8B3A1C; --error:#C8372D;
+  --wash:radial-gradient(120% 80% at 50% 0%, var(--p50) 0%, #FFFFFF 62%);
+  --orb:radial-gradient(circle at 34% 28%, var(--p50) 0%, var(--p200) 48%, var(--p400) 100%);
+  --shimmer:linear-gradient(90deg, var(--s50) 0%, var(--p50) 50%, var(--s50) 100%);
+  --e1:0 1px 2px rgba(26,24,22,.04), 0 4px 12px rgba(26,24,22,.04);
+  --e2:0 12px 32px -12px rgba(26,24,22,.14);
+  --e3:0 24px 48px -16px rgba(26,24,22,.20);
+  --f:"Geist", "Helvetica Neue", system-ui, sans-serif;
+  --mono:"Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --hi:"Mukta", "Noto Sans Devanagari", sans-serif;
   color-scheme:light;
 }
 *{box-sizing:border-box}
-body{background:var(--canvas);color:var(--ink);font:16px/1.5 var(--f-ui);-webkit-font-smoothing:antialiased}
-.wrap{max-width:1240px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 80px}
-h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;letter-spacing:-.02em}
-h2{font-size:clamp(28px,4vw,40px);line-height:1.1;font-weight:700}
+html{scroll-behavior:smooth}
+body{background:var(--s25);color:var(--s900);font:400 16px/1.5 var(--f);-webkit-font-smoothing:antialiased}
+.wrap{max-width:1160px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 96px}
+h1,h2,h3{margin:0;font-weight:600;text-wrap:balance}
+h2{font-size:28px;line-height:34px;letter-spacing:-.015em}
+h3{font-size:16px;line-height:22px;letter-spacing:-.005em}
 p{margin:0}
-.eyebrow{font:600 12px/16px var(--f-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
-.lede{color:var(--ink-2);max-width:60ch}
-.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
-button{font:inherit;color:inherit;cursor:pointer}
-button:focus-visible,a:focus-visible{outline:2px solid var(--chili);outline-offset:3px}
+.muted{color:var(--s500)}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.label{font:500 12px/16px var(--f);letter-spacing:.06em;text-transform:uppercase;color:var(--s500)}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+button:focus-visible,a:focus-visible{outline:2px solid var(--p400);outline-offset:3px;border-radius:999px}
 
-/* top bar */
-.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:8px 8px}
-.brand{display:flex;align-items:center;gap:10px;font:700 24px/1 var(--f-display);letter-spacing:-.03em}
-.brand i{width:22px;height:22px;border-radius:50%;background:var(--masala);box-shadow:0 6px 16px -6px #FF6A3D}
-.top .eyebrow{text-align:right}
+/* nav */
+nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;margin-inline:-8px;padding:10px 8px;display:flex;align-items:center;gap:20px;background:rgba(251,250,249,.82);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--s25)}
+.brand{display:flex;align-items:center;gap:8px;font:600 18px/1 var(--f);letter-spacing:-.02em}
+.brand i{width:18px;height:18px;border-radius:50%;background:var(--orb);box-shadow:inset 0 0 0 1px rgba(245,127,72,.15)}
+.links{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;min-width:0}
+.links a{flex:none;font-size:14px;color:var(--s600);text-decoration:none;padding:6px 10px;border-radius:999px}
+.links a:hover{background:var(--s50);color:var(--s900)}
+
+section{padding-block:72px 0;display:grid;gap:28px;scroll-margin-top:56px}
+.head{display:grid;gap:8px;max-width:640px}
+.head p{color:var(--s500)}
+.surface{background:var(--s0);border-radius:24px;box-shadow:var(--e1)}
 
 /* hero */
-.hero{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:24px;align-items:center;padding-block:28px 56px}
-.stage{position:relative;display:grid;place-items:center;min-height:420px;border-radius:40px;overflow:hidden;background:var(--surface)}
-.stage .pool{position:absolute;inset:-20%;background:radial-gradient(40% 40% at 50% 50%,var(--pool,#FF9F1C33),transparent 70%);transition:background .6s}
-#hero{position:relative;touch-action:none}
-.stage-cap{position:absolute;left:24px;bottom:20px;right:24px;display:flex;justify-content:space-between;gap:12px;align-items:baseline}
-.stage-cap b{font:700 20px/1 var(--f-display)}
-.stage-cap span{font-size:13px;color:var(--ink-2);text-align:right;max-width:34ch}
-.hero h1{font-size:clamp(40px,6vw,72px);line-height:.98;font-weight:750}
-.hero h1 em{font-style:normal;background:var(--masala);-webkit-background-clip:text;background-clip:text;color:transparent}
-.hero .lede{margin-top:16px;font-size:18px}
-.moods{display:flex;flex-wrap:wrap;gap:8px;margin-top:28px}
-.mood{border:0;border-radius:999px;padding:9px 14px 9px 10px;background:var(--tint);display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:550;transition:transform .15s,background .2s}
-.mood:hover{transform:translateY(-1px)}
-.mood i{width:12px;height:12px;border-radius:50%;background:var(--c)}
-.mood[aria-pressed="true"]{background:var(--ink);color:#fff}
-.hint{margin-top:14px;font-size:13px;color:var(--ink-3)}
+.hero{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:16px;padding-top:28px}
+.stage{position:relative;border-radius:32px;background:var(--wash);background-color:#fff;box-shadow:var(--e1);min-height:460px;display:grid;place-items:center;overflow:hidden}
+#hero{touch-action:none}
+.stage .cap{position:absolute;left:24px;right:24px;bottom:20px;display:flex;justify-content:space-between;align-items:baseline;gap:16px}
+.stage .cap b{font-weight:600;font-size:16px}
+.stage .cap span{font-size:13px;color:var(--s500);text-align:right;max-width:36ch}
+.intro{padding:24px 8px;display:flex;flex-direction:column;justify-content:center;gap:16px}
+.intro h1{font-size:clamp(36px,5vw,52px);line-height:1.04;letter-spacing:-.03em}
+.intro p{color:var(--s600);font-size:17px;max-width:46ch}
+.moods{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.mood{padding:8px 14px;border-radius:999px;background:var(--s50);font-size:14px;font-weight:500;color:var(--s700);transition:background .2s,color .2s}
+.mood:hover{background:var(--s100)}
+.mood[aria-pressed="true"]{background:var(--s900);color:#fff}
+.hint{font-size:13px;color:var(--s400)}
 
-/* section */
-section.band{padding-block:56px 8px;display:grid;gap:28px}
-.band-head{display:grid;gap:10px;max-width:760px}
+/* expression kit */
+.kit{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:10px}
+.kit figure{margin:0;padding:12px 6px 14px;display:grid;justify-items:center;gap:6px;background:var(--s0);border-radius:20px;box-shadow:var(--e1)}
+.kit figcaption{text-align:center;display:grid;gap:1px}
+.kit b{font-weight:600;font-size:14px}
+.kit span{font-size:12px;color:var(--s500)}
+.anatomy{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.anatomy div{padding:16px 18px;border-radius:16px;background:var(--s50);display:grid;gap:4px}
+.anatomy b{font-size:14px;font-weight:600}
+.anatomy span{font-size:13px;color:var(--s600)}
 
-/* phones */
-.gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:40px 24px;justify-items:center}
-figure{margin:0;display:grid;gap:14px;justify-items:center;max-width:100%}
-figcaption{text-align:center;display:grid;gap:2px}
-figcaption b{font:700 17px/1.2 var(--f-display)}
-figcaption span{font-size:13px;color:var(--ink-2)}
-.phone{width:300px;max-width:100%;height:640px;border-radius:46px;background:var(--surface);position:relative;overflow:hidden;
-  box-shadow:0 0 0 7px #fff,0 0 0 8px rgba(26,22,17,.07),0 40px 70px -40px rgba(26,22,17,.35)}
-.screen{position:absolute;inset:0;padding:14px 16px 18px;display:flex;flex-direction:column;gap:12px}
-.screen>*{position:relative}
-.pool-a{position:absolute!important;border-radius:50%;filter:blur(36px);pointer-events:none}
-.status{display:flex;justify-content:space-between;align-items:center;font:600 13px/1 var(--f-ui);padding:4px 10px 0}
-.status .sig{display:flex;gap:2px;align-items:flex-end}
-.status .sig i{display:block;width:3px;background:var(--ink);border-radius:1px}
-.island{align-self:center;display:flex;align-items:center;gap:6px;padding:2px 14px 2px 2px;border-radius:999px;background:rgba(255,255,255,.86);
-  box-shadow:0 10px 26px -14px rgba(26,22,17,.35);font:600 13px/1 var(--f-ui);min-height:46px;backdrop-filter:blur(10px)}
-.island.solo{padding:2px}
-.island .mono{font-size:12px;color:var(--ink-2)}
-.ctx{align-self:flex-start;display:inline-flex;gap:6px;align-items:center;font-size:12px;font-weight:550;color:var(--ink-2);background:rgba(255,255,255,.7);padding:6px 10px;border-radius:999px}
-.ctx i{width:6px;height:6px;border-radius:50%;background:var(--c,var(--saffron))}
-.say{font:700 26px/1.08 var(--f-display);letter-spacing:-.02em}
-.say small{display:block;font:500 14px/1.4 var(--f-ui);color:var(--ink-2);letter-spacing:0;margin-top:6px}
-.chips{display:flex;flex-wrap:wrap;gap:6px}
-.chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:550;padding:6px 10px;border-radius:999px;background:var(--tint);color:var(--ink)}
-.chip i{width:6px;height:6px;border-radius:50%;background:var(--c,var(--ink-3))}
-.chip.on{background:var(--c);color:#fff}
-.chip.on i{background:#fff}
-.btn{border:0;border-radius:999px;padding:14px 18px;font:650 15px/1 var(--f-ui);display:flex;align-items:center;justify-content:center;gap:8px}
-.btn.masala{background:var(--masala);color:#fff;box-shadow:0 14px 28px -14px #FF6A3D}
-.btn.ink{background:var(--ink);color:#fff}
-.btn.ghost{background:var(--tint)}
-.row{display:flex;gap:8px;align-items:center}
-.grow{flex:1;min-width:0}
-.meta{font:500 12px/1.3 var(--f-mono);color:var(--ink-2);font-variant-numeric:tabular-nums}
-.dish{font:700 20px/1.1 var(--f-display);letter-spacing:-.01em}
-.vm{display:inline-grid;place-items:center;width:12px;height:12px;border:1.5px solid var(--c);border-radius:2px;flex:none}
-.vm::after{content:"";width:5px;height:5px;border-radius:50%;background:var(--c)}
-.vm.nv::after{border-radius:0;width:0;height:0;background:none;border-left:3px solid transparent;border-right:3px solid transparent;border-bottom:5px solid var(--c)}
-canvas.plate{display:block}
-.float{animation:float 6s ease-in-out infinite}
-@keyframes float{50%{transform:translateY(-8px)}}
-
-/* chat */
-.bubble{align-self:flex-end;max-width:80%;background:var(--ink);color:#fff;padding:10px 14px;border-radius:20px 20px 6px 20px;font-size:14px}
-.carousel{display:flex;align-items:center;justify-content:center;gap:0;margin-inline:-16px;height:150px}
-.carousel canvas{flex:none}
-.carousel .side{filter:blur(1.4px);opacity:.8}
-.offer{border-radius:var(--r-md);padding:12px 14px;background:linear-gradient(120deg,#FFF6D8,#FFEFC2);position:relative;overflow:hidden}
-.offer::after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.75) 50%,transparent 65%);transform:translateX(-100%);animation:glint 3.2s ease-in-out infinite}
-@keyframes glint{60%,100%{transform:translateX(100%)}}
-.offer b{font:700 15px/1.2 var(--f-display)}
-.save{font:600 13px/1 var(--f-mono);color:var(--gold-ink)}
-.composer{margin-top:auto;display:flex;align-items:center;gap:8px;background:var(--tint);border-radius:999px;padding:6px 6px 6px 16px;font-size:14px;color:var(--ink-3)}
-.mic{width:40px;height:40px;border-radius:50%;background:var(--masala);display:grid;place-items:center;box-shadow:0 10px 20px -10px #FF6A3D;flex:none}
-.mic svg{width:18px;height:18px}
-
-/* checkout */
-.line{display:flex;align-items:center;gap:10px;font-size:14px}
-.line .grow{display:grid;gap:2px}
-.line .meta{font-size:11px}
-.bill{display:grid;gap:6px;font-size:13px;color:var(--ink-2);padding-top:4px}
-.bill div{display:flex;justify-content:space-between}
-.bill .gold{color:var(--gold-ink)}
-.bill .total{color:var(--ink);font-weight:600;font-size:15px;padding-top:6px}
-.prefill{display:grid;gap:2px;padding:10px 14px;background:var(--tint);border-radius:var(--r-sm);font-size:13px}
-.prefill span{color:var(--ink-2);font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:600}
-
-/* tracking */
-.eta{font:600 56px/1 var(--f-mono);letter-spacing:-.04em;color:var(--lagoon-ink)}
-.eta small{font:600 16px/1 var(--f-ui);letter-spacing:0;color:var(--ink-2);margin-left:4px}
-.route{position:relative;height:170px}
-.route svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
-.route canvas{position:absolute;left:0;top:0}
-.steps{display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--ink-3)}
-.steps .done{color:var(--lagoon-ink)}
-.care{border-radius:var(--r-md);padding:12px 14px;background:#F1EEFF;display:grid;gap:8px;font-size:13px}
-.care b{font:700 15px/1.25 var(--f-display)}
-
-/* palette */
-.swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:28px 16px}
-.sw{display:grid;gap:10px}
-.sw .orb{width:84px;height:84px;border-radius:50%;background:var(--c);box-shadow:inset -10px -14px 24px rgba(0,0,0,.14),inset 10px 12px 20px rgba(255,255,255,.35),0 18px 30px -16px var(--c)}
-.sw b{font:700 16px/1 var(--f-display)}
-.sw span{font-size:13px;color:var(--ink-2)}
-.base{display:flex;flex-wrap:wrap;gap:10px}
-.base div{display:grid;gap:6px;font-size:12px;color:var(--ink-2)}
-.base i{display:block;width:96px;height:56px;border-radius:var(--r-sm);background:var(--c);box-shadow:inset 0 0 0 1px rgba(26,22,17,.06)}
-.masala-bar{height:72px;border-radius:999px;background:var(--masala);display:flex;align-items:center;padding:0 28px;color:#fff;font:700 22px/1 var(--f-display);box-shadow:0 26px 40px -26px #FF6A3D}
+/* colour */
+.ramp{display:grid;gap:10px}
+.ramp-row{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));border-radius:20px;overflow:hidden;box-shadow:var(--e1)}
+.ramp-row.stone{grid-template-columns:repeat(12,minmax(0,1fr))}
+.tone{aspect-ratio:1/1.25;padding:10px;display:flex;flex-direction:column;justify-content:flex-end;gap:2px;background:var(--c);color:var(--t,var(--s900));min-width:0}
+.tone b{font:500 12px/1 var(--f)}
+.tone span{font:400 10px/1.2 var(--mono);opacity:.75;overflow:hidden;text-overflow:ellipsis}
+.tone.key{box-shadow:inset 0 0 0 2px rgba(255,255,255,.7)}
+.ratio{display:flex;height:44px;border-radius:999px;overflow:hidden;box-shadow:var(--e1)}
+.ratio div{display:flex;align-items:center;padding:0 16px;font-size:12px;font-weight:500;white-space:nowrap}
+.cols3{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.grad{border-radius:20px;overflow:hidden;background:var(--s0);box-shadow:var(--e1)}
+.grad .swatch{height:120px}
+.grad div:last-child{padding:14px 16px;display:grid;gap:2px}
+.grad b{font-size:14px;font-weight:600}
+.grad span{font-size:13px;color:var(--s500)}
+.rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.rule{padding:18px;border-radius:20px;background:var(--s0);box-shadow:var(--e1);display:grid;gap:12px;align-content:start}
+.rule .ex{height:96px;border-radius:14px;display:grid;place-items:center;gap:8px}
+.rule b{font-size:14px;font-weight:600}
+.rule p{font-size:13px;color:var(--s600)}
+.functional{display:flex;flex-wrap:wrap;gap:20px;font-size:13px;color:var(--s600);align-items:center}
+.functional span{display:inline-flex;align-items:center;gap:8px}
 
 /* type */
-.type{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px}
-.spec{background:var(--surface);border-radius:var(--r-lg);padding:24px;display:grid;gap:12px;align-content:start}
-.spec .big{font-size:56px;line-height:1;letter-spacing:-.03em}
-.spec p{color:var(--ink-2);font-size:14px}
+.scale{background:var(--s0);border-radius:24px;box-shadow:var(--e1);padding:8px 24px}
+.ts{display:grid;grid-template-columns:120px minmax(0,1fr) 150px;gap:16px;align-items:baseline;padding:18px 0}
+.ts+.ts{box-shadow:0 -1px 0 var(--s50)}
+.ts code{font:400 12px/1.4 var(--mono);color:var(--s500)}
+.ts .spec{font:400 12px/1.4 var(--mono);color:var(--s400);text-align:right}
+.ts .sample{min-width:0;overflow-wrap:anywhere}
 
-/* motion demo */
-.demo{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;align-items:start}
-.demo-box{background:var(--surface);border-radius:36px;padding:20px;min-height:430px;display:flex;flex-direction:column;align-items:center;gap:14px;position:relative;overflow:hidden}
-.demo-box .chips{justify-content:center;min-height:30px}
-.emerge{animation:emerge .42s cubic-bezier(.2,.9,.25,1.15) both;transform-origin:50% -40px}
-@keyframes emerge{from{opacity:0;transform:translateY(-16px) scale(.86);filter:blur(8px)}}
-.pick{width:100%;max-width:300px;display:grid;justify-items:center;gap:6px;text-align:center}
-.tokens{display:grid;gap:2px;font-size:14px}
-.tokens div{display:grid;grid-template-columns:130px minmax(0,1fr);gap:12px;padding:10px 0}
-.tokens div+div{box-shadow:0 -1px 0 var(--tint)}
-.tokens code{font:500 13px/1.4 var(--f-mono)}
-.tokens span{color:var(--ink-2)}
+/* scales */
+.space{display:grid;gap:8px}
+.space div{display:grid;grid-template-columns:44px minmax(0,1fr);align-items:center;gap:12px;font:400 12px/1 var(--mono);color:var(--s500)}
+.space i{display:block;height:12px;border-radius:3px;background:var(--p200)}
+.radii{display:flex;flex-wrap:wrap;gap:12px}
+.radii div{display:grid;gap:8px;justify-items:center;font:400 12px/1 var(--mono);color:var(--s500)}
+.radii i{display:block;width:64px;height:64px;background:var(--s50);box-shadow:inset 0 0 0 1px var(--s100)}
+.elev{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:20px;padding:12px;background:var(--s25);border-radius:16px}
+.elev div{height:96px;border-radius:16px;background:var(--s0);display:flex;flex-direction:column;justify-content:flex-end;padding:12px;font-size:12px;color:var(--s500)}
+.elev b{font-size:13px;color:var(--s900);font-weight:600}
+.frost{position:relative;height:120px;border-radius:16px;overflow:hidden;background:var(--s50)}
+.frost canvas{position:absolute;left:16px;top:10px}
+.frost .pill{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:12px 20px;border-radius:999px;background:rgba(255,255,255,.72);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:var(--e3);font-size:14px;font-weight:500;white-space:nowrap}
 
-/* stage table */
-.scroll{overflow-x:auto;border-radius:var(--r-lg);background:var(--surface)}
-table{border-collapse:collapse;width:100%;min-width:760px;font-size:14px}
-th,td{text-align:left;padding:14px 16px;vertical-align:top}
-th{font:600 12px/1 var(--f-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
-tbody tr:nth-child(odd){background:#FCFBF9}
-td b{font-family:var(--f-display);font-size:15px}
-.dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--c);margin-right:8px;vertical-align:middle}
-.note{font-size:13px;color:var(--ink-3)}
+/* icons */
+.icons{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+.icons div{display:grid;justify-items:center;gap:10px;padding:18px 8px 14px;border-radius:16px;background:var(--s0);box-shadow:var(--e1);font-size:12px;color:var(--s500)}
+.icons svg{width:24px;height:24px;color:var(--s600)}
+.icons div:first-child svg{color:var(--p500)}
+.ico{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+
+/* components */
+.comp{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px}
+.card{background:var(--s0);border-radius:24px;box-shadow:var(--e1);padding:20px;display:grid;gap:16px;align-content:start;min-width:0}
+.card>.label{margin-bottom:-4px}
+.stack{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.col{display:grid;gap:10px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:44px;padding:0 18px;border-radius:999px;font:500 14px/1 var(--f);transition:transform .12s,background .2s}
+.btn:active{transform:scale(.97)}
+.btn.lg{height:52px;padding:0 22px;font-size:15px}
+.btn.sm{height:36px;padding:0 14px;font-size:13px}
+.btn.primary{background:var(--s900);color:#fff}
+.btn.primary:hover{background:#2E2A27}
+.btn.soft{background:var(--p100);color:var(--p700)}
+.btn.soft:hover{background:var(--p200)}
+.btn.secondary{background:var(--s50);color:var(--s900)}
+.btn.secondary:hover{background:var(--s100)}
+.btn.text{color:var(--s600);padding:0 8px}
+.btn.disabled{background:var(--s50);color:var(--s400);cursor:not-allowed}
+.btn.icon{width:44px;padding:0;background:var(--s50);color:var(--s700)}
+.micbtn{width:56px;height:56px;border-radius:50%;background:var(--orb);display:grid;place-items:center;color:var(--s800);box-shadow:0 10px 24px -12px rgba(245,127,72,.55),inset 0 0 0 1px rgba(245,127,72,.12);position:relative}
+.micbtn.live::before,.micbtn.live::after{content:"";position:absolute;inset:-6px;border-radius:50%;box-shadow:0 0 0 2px var(--p200);animation:ring 1.8s ease-out infinite}
+.micbtn.live::after{animation-delay:.9s}
+@keyframes ring{from{transform:scale(.9);opacity:1}to{transform:scale(1.35);opacity:0}}
+.chip{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:999px;font:500 13px/1 var(--f);background:var(--s50);color:var(--s700);white-space:nowrap}
+.chip .ico{width:16px;height:16px}
+.chip.thought .ico{color:var(--p500)}
+.chip.ctx{background:none;padding:0;color:var(--s500);height:auto}
+.chip.sel{background:var(--s900);color:#fff}
+.chip.brand{background:var(--p50);color:var(--p700)}
+.composer{display:flex;align-items:center;gap:10px;padding:6px 6px 6px 18px;border-radius:999px;background:var(--s50);min-height:60px}
+.composer .ph{flex:1;min-width:0;color:var(--s400);font-size:15px}
+.composer.listening{background:var(--s0);box-shadow:0 0 0 4px var(--p50),0 0 0 5px var(--p200),var(--e2)}
+.wave{flex:1;display:flex;align-items:center;gap:3px;height:28px;min-width:0}
+.wave i{flex:none;width:3px;border-radius:2px;background:var(--p400);height:6px;transition:height .12s}
+.wave-label{font-size:13px;color:var(--s500);white-space:nowrap}
+.stop{width:44px;height:44px;border-radius:50%;background:var(--s900);display:grid;place-items:center;flex:none}
+.stop i{width:12px;height:12px;border-radius:3px;background:#fff}
+.island{display:inline-flex;align-items:center;gap:8px;padding:2px;border-radius:999px;background:rgba(255,255,255,.8);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:var(--e3);font-size:14px;font-weight:500;min-height:48px;max-width:100%}
+.island.open{padding-right:18px}
+.island .shim{background:linear-gradient(90deg,var(--s500) 0%,var(--s500) 35%,var(--p500) 50%,var(--s500) 65%,var(--s500) 100%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:shim 2.2s linear infinite;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+@keyframes shim{from{background-position:100% 0}to{background-position:-150% 0}}
+.islands{display:grid;gap:14px;justify-items:center;padding:20px 8px;border-radius:16px;background:var(--wash);background-color:#fff}
+.dish{display:flex;align-items:center;gap:14px;min-width:0}
+.dish .body{flex:1;min-width:0;display:grid;gap:2px}
+.dish .name{display:flex;align-items:center;gap:6px;font-weight:600;font-size:15px}
+.dish .name span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dish .rest{font-size:13px;color:var(--s500)}
+.meta{font:400 12px/16px var(--mono);color:var(--s500);font-variant-numeric:tabular-nums}
+.vm{display:inline-grid;place-items:center;width:13px;height:13px;border:1.5px solid var(--c);border-radius:3px;flex:none}
+.vm::after{content:"";width:5px;height:5px;border-radius:50%;background:var(--c)}
+.vm.nv::after{border-radius:0;width:0;height:0;background:none;border-left:3.5px solid transparent;border-right:3.5px solid transparent;border-bottom:6px solid var(--c)}
+.pick{display:grid;justify-items:center;gap:10px;text-align:center;padding:8px 0 4px}
+.pick .tag{display:inline-flex;align-items:center;gap:6px;font:500 12px/1 var(--f);color:var(--p600);letter-spacing:.02em}
+.pick .tag .ico{width:14px;height:14px}
+.pick h3{font-size:22px;line-height:28px;letter-spacing:-.015em}
+.offer{display:flex;align-items:center;gap:12px;padding:14px;border-radius:18px;background:var(--p50)}
+.offer .ico{color:var(--p600)}
+.offer .t{flex:1;min-width:0;font-size:14px;color:var(--s800);display:grid;gap:2px}
+.offer .save{font:500 13px/1 var(--mono);color:var(--p700)}
+.toast{display:flex;align-items:center;gap:12px;padding:8px 8px 8px 18px;border-radius:999px;background:var(--s900);color:#fff;font-size:14px;box-shadow:var(--e3)}
+.toast .t{flex:1;min-width:0}
+.toast .undo{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 14px;border-radius:999px;background:rgba(255,255,255,.1);font-weight:500}
+.toast svg.ring{width:18px;height:18px;transform:rotate(-90deg)}
+.toast .ring circle{fill:none;stroke-width:2.5}
+.err{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--error)}
+canvas.plate{display:block;flex:none}
+
+/* motion */
+.motion{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:start}
+.demo{min-height:470px;padding:20px;border-radius:24px;background:var(--wash);background-color:#fff;box-shadow:var(--e1);display:flex;flex-direction:column;align-items:center;gap:16px;overflow:hidden}
+.demo .chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;min-height:32px}
+.emerge{animation:emerge .42s cubic-bezier(.2,.9,.25,1.12) both;transform-origin:50% -60px}
+@keyframes emerge{from{opacity:0;transform:translateY(-16px) scale(.88);filter:blur(8px)}}
+.tokens{background:var(--s0);border-radius:24px;box-shadow:var(--e1);padding:8px 20px}
+.tokens div{display:grid;grid-template-columns:130px minmax(0,1fr);gap:12px;padding:12px 0;font-size:14px}
+.tokens div+div{box-shadow:0 -1px 0 var(--s50)}
+.tokens code{font:400 13px/1.5 var(--mono);color:var(--s900)}
+.tokens span{color:var(--s600)}
 
 @media (max-width:860px){
-  .hero,.demo{grid-template-columns:minmax(0,1fr)}
-  .stage{min-height:360px}
+  .hero,.motion{grid-template-columns:minmax(0,1fr)}
+  .stage{min-height:380px}
+  .ts{grid-template-columns:minmax(0,1fr)}
+  .ts .spec{text-align:left}
+  .ramp-row,.ramp-row.stone{grid-template-columns:repeat(5,minmax(0,1fr))}
+  .ramp-row.stone{grid-template-columns:repeat(6,minmax(0,1fr))}
 }
 @media (prefers-reduced-motion:reduce){
-  .float,.offer::after{animation:none}
+  html{scroll-behavior:auto}
+  .micbtn.live::before,.micbtn.live::after,.island .shim{animation:none}
   .emerge{animation:fade .2s both}
   @keyframes fade{from{opacity:0}}
 }
 </style>
 
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-sparkle" viewBox="0 0 24 24"><path d="M12 3.5c.6 4.2 2.9 6.5 7 7-4.1.6-6.4 2.9-7 7-.6-4.1-2.9-6.4-7-7 4.1-.5 6.4-2.8 7-7z"/><path d="M18.5 3.5v3M17 5h3"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M12 19V5M6.5 10.5 12 5l5.5 5.5"/></symbol>
+  <symbol id="i-bag" viewBox="0 0 24 24"><path d="M5 8h14l-1.2 11.2a2 2 0 0 1-2 1.8H8.2a2 2 0 0 1-2-1.8z"/><path d="M9 10V7a3 3 0 0 1 6 0v3"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-6.5-5.8-6.5-11a6.5 6.5 0 0 1 13 0c0 5.2-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/></symbol>
+  <symbol id="i-tag" viewBox="0 0 24 24"><path d="M3.5 12.2V4.5a1 1 0 0 1 1-1h7.7l8.3 8.3a1.5 1.5 0 0 1 0 2.1l-6.4 6.4a1.5 1.5 0 0 1-2.1 0z"/><circle cx="8" cy="8" r="1.4"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3.5 19 6v5.5c0 4.4-3 7.7-7 9-4-1.3-7-4.6-7-9V6z"/><path d="m9 12 2.2 2.2L15.5 10"/></symbol>
+  <symbol id="i-scooter" viewBox="0 0 24 24"><circle cx="6" cy="17" r="2.5"/><circle cx="18" cy="17" r="2.5"/><path d="M8.5 17H14l2.5-8H19M14 17l-2.5-6H7.5"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M5 5.5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H10l-4.5 3.5V16.5H5a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1z"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 4 2.4 5 5.4.6-4 3.7 1.1 5.3L12 16l-4.9 2.6 1.1-5.3-4-3.7 5.4-.6z"/></symbol>
+  <symbol id="i-flame" viewBox="0 0 24 24"><path d="M12 3.5c.8 3.4 4.5 5 4.5 9.5a4.5 4.5 0 0 1-9 0c0-2.4 1.4-3.6 1.8-5.3 1 .8 1.7 1.8 1.9 2.8.3-2.6.3-4.7.8-7z"/></symbol>
+  <symbol id="i-leaf" viewBox="0 0 24 24"><path d="M5.5 18.5C5.5 10 11 5 19 5c0 8-5 13.5-13.5 13.5z"/><path d="M5.5 18.5 13 11"/></symbol>
+  <symbol id="i-protein" viewBox="0 0 24 24"><path d="M4 9.5v5M7 7.5v9M17 7.5v9M20 9.5v5M7 12h10"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9.5 6 6 6-6 6"/></symbol>
+  <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14 4.5 9.5 9 5"/><path d="M4.5 9.5H14a5.5 5.5 0 0 1 0 11h-3"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5.5v13M5.5 12h13"/></symbol>
+  <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7.5 17.5a4 4 0 0 1-.4-8 5.5 5.5 0 0 1 10.6 1.5 3.3 3.3 0 0 1-.2 6.5z"/><path d="M9 20.5l.6-1M13 20.5l.6-1"/></symbol>
+</svg>
+
 <div class="wrap">
-  <div class="top">
+  <nav aria-label="Sections">
     <div class="brand"><i></i>hunch</div>
-    <div class="eyebrow">Design language · v0.1</div>
+    <div class="links">
+      <a href="#character">Character</a><a href="#colour">Colour</a><a href="#type">Type</a><a href="#space">Space</a><a href="#icons">Icons</a><a href="#components">Components</a><a href="#motion">Motion</a>
+    </div>
+  </nav>
+
+  <div class="hero">
+    <div class="stage" id="stage">
+      <canvas id="hero" aria-label="Hunch, an animated character"></canvas>
+      <div class="cap"><b id="mood-name">Idle</b><span id="mood-note"></span></div>
+    </div>
+    <div class="intro">
+      <span class="label">Foundations · v0.2</span>
+      <h1>Calm interface. One lively character.</h1>
+      <p>The interface is neutral and quiet. Hunch is the only thing that moves on its own, and the only thing that carries colour. Emotion comes from its face, not from more colours.</p>
+      <div class="moods" id="moods" role="group" aria-label="Hunch moods"></div>
+      <p class="hint">Pick a mood, or move your pointer and Hunch watches it. Tap Hunch to make it happy.</p>
+    </div>
   </div>
 
-  <section class="hero" aria-label="Meet Hunch">
-    <div class="stage" id="stage">
-      <div class="pool"></div>
-      <canvas id="hero" aria-label="Hunch, an animated orb character"></canvas>
-      <div class="stage-cap"><b id="mood-name">Idle</b><span id="mood-note">Waiting for you. Breathes slowly, eyes follow your finger.</span></div>
+  <section id="character" aria-labelledby="h-character">
+    <div class="head">
+      <span class="label">01 · Character</span>
+      <h2 id="h-character">Nine moods, one colour</h2>
+      <p>A soft persimmon pearl with an ink face. The lids carry most of the emotion. Care and Sleepy fade slightly toward stone; no mood changes hue.</p>
     </div>
-    <div>
-      <div class="eyebrow">Meet Hunch</div>
-      <h1 style="margin-top:10px">A living drop of <em>flavour</em> that orders for you.</h1>
-      <p class="lede">Hunch has no face to fake. It feels through its eyes, its shape, its colour and its glow. It sits on top of every screen, and everything you see grows out of it.</p>
-      <div class="moods" id="moods" role="group" aria-label="Hunch moods"></div>
-      <p class="hint">Tap a mood. Move your pointer over Hunch and it looks at you.</p>
-    </div>
-  </section>
-
-  <section class="band" aria-labelledby="s-screens">
-    <div class="band-head">
-      <div class="eyebrow">Every stage has an identity</div>
-      <h2 id="s-screens">Six moments, one character</h2>
-      <p class="lede">Each stage owns a colour pool and a Hunch mood. There is only ever one Hunch on screen: in tracking it leaves the island and rides the route. Plates are generated placeholders; production uses real top-down photography cut to a circle.</p>
-    </div>
-    <div class="gallery">
-
-      <!-- 1 Onboarding -->
-      <figure>
-        <div class="phone"><div class="screen">
-          <div class="pool-a" style="width:320px;height:320px;left:-40px;top:60px;background:#FFC46B66"></div>
-          <div class="pool-a" style="width:240px;height:240px;right:-90px;top:240px;background:#E2366E33"></div>
-          <div class="status"><span>9:41</span><span class="sig"><i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i style="height:10px"></i></span></div>
-          <div style="display:grid;place-items:center;margin-top:6px"><canvas data-hunch="found" data-size="132" data-look="0,.2"></canvas></div>
-          <div class="say" style="text-align:center">Hi, I'm Hunch.<small>Tap what you've been craving lately.</small></div>
-          <div style="height:120px">
-            <canvas class="plate float" data-plate="biryani" data-size="78" style="position:absolute;left:4px;top:8px"></canvas>
-            <canvas class="plate float" data-plate="bowl" data-size="92" style="position:absolute;left:96px;top:24px;animation-delay:-2s;filter:drop-shadow(0 0 0 transparent)"></canvas>
-            <canvas class="plate float" data-plate="pizza" data-size="70" style="position:absolute;right:4px;top:4px;animation-delay:-4s"></canvas>
-          </div>
-          <div class="chips">
-            <span class="chip on" style="--c:var(--basil)"><i></i>High protein</span>
-            <span class="chip"><i style="--c:var(--saffron)"></i>Cutting</span>
-            <span class="chip"><i style="--c:var(--basil)"></i>Veg</span>
-            <span class="chip"><i style="--c:var(--chili)"></i>Spicy</span>
-            <span class="chip"><i style="--c:var(--lavender)"></i>Jain</span>
-          </div>
-          <div class="row" style="justify-content:center;gap:4px;font-size:13px;font-weight:600">
-            <span class="chip" style="background:var(--ink);color:#fff">English</span><span class="chip" style="font-family:var(--f-hi)">हिंदी</span><span class="chip">Hinglish</span>
-          </div>
-          <button class="btn masala" style="margin-top:auto">That's me</button>
-        </div></div>
-        <figcaption><b>Onboarding</b><span>Masala pool · Hunch: Found it · 30 seconds, no forms</span></figcaption>
-      </figure>
-
-      <!-- 2 Now / proactive -->
-      <figure>
-        <div class="phone"><div class="screen" style="background:linear-gradient(180deg,#FFE9DC 0%,#FFF4EC 38%,#fff 70%)">
-          <div class="pool-a" style="width:300px;height:220px;left:0;top:250px;background:#F59A1E40"></div>
-          <div class="status"><span>9:41</span><span class="sig"><i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i style="height:10px"></i></span></div>
-          <div class="island"><canvas data-hunch="idle" data-size="44" data-look=".3,.5"></canvas><span>Your usual is ready</span></div>
-          <span class="ctx" style="--c:var(--lagoon)"><i></i>6:40 PM · Light rain · Indiranagar</span>
-          <div class="say">Baarish aur biryani?<small>Your Friday usual from Meghana's. One tap.</small></div>
-          <div style="display:grid;place-items:center"><canvas class="plate" data-plate="biryani" data-size="176" style="filter:drop-shadow(0 22px 24px rgba(201,120,31,.35))"></canvas></div>
-          <div class="row"><span class="vm nv" style="--c:#8B3A1C"></span><span class="dish grow">Chicken Dum Biryani</span></div>
-          <div class="meta" style="margin-top:-6px">₹289 · 32 min · 4.6★ · 780 kcal</div>
-          <div class="chips">
-            <span class="chip"><i style="--c:var(--lagoon)"></i>Raining → comfort</span>
-            <span class="chip"><i style="--c:var(--saffron)"></i>Your Friday usual</span>
-          </div>
-          <div class="row" style="margin-top:auto">
-            <button class="btn ghost">Lighter</button>
-            <button class="btn masala grow">Order · <span class="mono">₹289</span></button>
-          </div>
-        </div></div>
-        <figcaption><b>Now · Proactive</b><span>Dusk wash · Hunch: Idle · ready before you type</span></figcaption>
-      </figure>
-
-      <!-- 3 Conversation -->
-      <figure>
-        <div class="phone"><div class="screen">
-          <div class="pool-a" style="width:280px;height:200px;left:10px;top:200px;background:#FFC46B40"></div>
-          <div class="status"><span>9:41</span><span class="sig"><i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i style="height:10px"></i></span></div>
-          <div class="island"><canvas data-hunch="deal" data-size="44" data-look="0,.6"></canvas><span>Found a better deal</span></div>
-          <div class="bubble">gym day. high protein, under 400 cal, not boring</div>
-          <div class="chips">
-            <span class="chip"><i style="--c:var(--basil)"></i>35 g+ protein</span>
-            <span class="chip"><i style="--c:var(--saffron)"></i>Under 400 kcal</span>
-            <span class="chip"><i style="--c:var(--ink-3)"></i>Skip paneer, had it Tue</span>
-          </div>
-          <div class="carousel">
-            <canvas class="plate side" data-plate="salad" data-size="84"></canvas>
-            <canvas class="plate" data-plate="bowl" data-size="146" style="filter:drop-shadow(0 18px 18px rgba(200,116,46,.3))"></canvas>
-            <canvas class="plate side" data-plate="tikka" data-size="84"></canvas>
-          </div>
-          <div style="text-align:center;display:grid;gap:2px">
-            <span class="dish">Grilled Chicken Bowl</span>
-            <span class="meta">38 g protein · 380 kcal · ₹269</span>
-          </div>
-          <div class="offer">
-            <div class="row"><div class="grow"><b>Same bowl, 20% off at FitBowl Co.</b><div class="meta" style="margin-top:3px">4.5★ · 26 min · 1.2 km</div></div><span class="save">−₹54</span></div>
-          </div>
-          <div class="composer"><span class="grow">Ask for anything…</span><span class="mic"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span></div>
-        </div></div>
-        <figcaption><b>Conversation</b><span>Saffron pool · Hunch: Deal · reasoning in 3 chips, offer intercepts</span></figcaption>
-      </figure>
-
-      <!-- 4 Checkout -->
-      <figure>
-        <div class="phone"><div class="screen">
-          <div class="status"><span>9:41</span><span class="sig"><i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i style="height:10px"></i></span></div>
-          <div class="island"><canvas data-hunch="trust" data-size="44" data-look="0,.5"></canvas><span>All set. Just pay.</span></div>
-          <div class="say" style="font-size:22px">Your order</div>
-          <div class="line"><canvas class="plate" data-plate="bowl" data-size="48"></canvas><div class="grow"><span>Grilled Chicken Bowl</span><span class="meta">Extra chicken · no onion</span></div><span class="mono">₹269</span></div>
-          <div class="line"><canvas class="plate" data-plate="coffee" data-size="48"></canvas><div class="grow"><span>Cold Coffee</span><span class="meta">No sugar · your usual</span></div><span class="mono">₹120</span></div>
-          <div class="bill mono">
-            <div><span>Item total</span><span>₹389</span></div>
-            <div><span>Delivery</span><span>₹0</span></div>
-            <div class="gold"><span>FitBowl 20% off</span><span>−₹54</span></div>
-            <div class="total"><span>To pay</span><span>₹335</span></div>
-          </div>
-          <div class="prefill"><span>Deliver to</span>Home · 12th Main, Indiranagar</div>
-          <div class="prefill"><span>Pay with</span>UPI · GPay ··4821</div>
-          <button class="btn ink" style="margin-top:auto">Pay <span class="mono">₹335</span></button>
-          <div class="note" style="text-align:center;margin-top:-4px">Razorpay · test mode · Undo for 5 s after paying</div>
-        </div></div>
-        <figcaption><b>Checkout</b><span>Neutral ink · Hunch: Trust · everything stills, one button</span></figcaption>
-      </figure>
-
-      <!-- 5 Tracking -->
-      <figure>
-        <div class="phone"><div class="screen" style="background:linear-gradient(180deg,#EAF2FF 0%,#fff 60%)">
-          <div class="status"><span>9:41</span><span class="sig"><i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i style="height:10px"></i></span></div>
-          <div class="island" style="padding:2px 16px"><span>On the way</span><span class="mono">#HN-2048</span></div>
-          <div class="eta"><span id="eta">12</span><small>min</small></div>
-          <p style="font-size:14px;color:var(--ink-2);margin-top:-4px">Arjun picked up your bowl. Hunch is riding along.</p>
-          <div class="route" id="route">
-            <svg viewBox="0 0 268 170" preserveAspectRatio="none" aria-hidden="true">
-              <path id="route-path" d="M18 140 C 70 150, 70 60, 130 78 S 210 120, 250 28" fill="none" stroke="#2F7CF0" stroke-opacity=".18" stroke-width="10" stroke-linecap="round"/>
-              <path d="M18 140 C 70 150, 70 60, 130 78 S 210 120, 250 28" fill="none" stroke="#2F7CF0" stroke-width="2.5" stroke-dasharray="2 7" stroke-linecap="round"/>
-              <circle cx="18" cy="140" r="7" fill="#fff" stroke="#2F7CF0" stroke-width="3"/>
-              <circle cx="250" cy="28" r="9" fill="#2F7CF0"/><circle cx="250" cy="28" r="3.5" fill="#fff"/>
-              <text x="30" y="162" font-size="11" font-weight="600" fill="#6E665B" font-family="Instrument Sans, sans-serif">FitBowl Co.</text>
-              <text x="216" y="58" font-size="11" font-weight="600" fill="#6E665B" font-family="Instrument Sans, sans-serif">Home</text>
-            </svg>
-            <canvas data-hunch="track" data-size="58" id="rider"></canvas>
-          </div>
-          <div class="steps"><span class="done">Confirmed</span><span class="done">Cooked</span><span class="done">Picked up</span><span>At your door</span></div>
-          <div class="row" style="margin-top:auto">
-            <button class="btn ghost grow">Cancel</button>
-            <button class="btn ghost grow">Help</button>
-          </div>
-        </div></div>
-        <figcaption><b>Tracking</b><span>Lagoon pool · Hunch: On the way · leaves the island to ride the route</span></figcaption>
-      </figure>
-
-      <!-- 6 Support -->
-      <figure>
-        <div class="phone"><div class="screen" style="background:linear-gradient(180deg,#F3F0FF 0%,#fff 55%)">
-          <div class="pool-a" style="width:260px;height:260px;left:20px;top:80px;background:#8B7CF233"></div>
-          <div class="status"><span>9:41</span><span class="sig"><i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i style="height:10px"></i></span></div>
-          <div class="island"><canvas data-hunch="care" data-size="44"></canvas><span>I'm on it</span></div>
-          <div class="bubble">where is my food?? it's been 40 min</div>
-          <div class="say" style="font-size:22px">Sorry, Arjun's stuck at the Domlur signal.<small>New ETA is 9 min. I didn't wait for you to ask.</small></div>
-          <div class="care">
-            <b>₹40 credit added to your wallet</b>
-            <span style="color:var(--ink-2)">Applied automatically on your next order.</span>
-          </div>
-          <div class="chips">
-            <span class="chip"><i style="--c:var(--lavender)"></i>Share live location</span>
-            <span class="chip"><i style="--c:var(--chili)"></i>Cancel &amp; refund</span>
-            <span class="chip"><i style="--c:var(--ink-3)"></i>Talk to a person</span>
-          </div>
-          <div class="composer"><span class="grow">Tell Hunch what's wrong…</span><span class="mic" style="background:var(--lavender);box-shadow:none"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span></div>
-        </div></div>
-        <figcaption><b>Support</b><span>Lavender pool · Hunch: Care · the fix comes before the questions</span></figcaption>
-      </figure>
+    <div class="kit" id="kit"></div>
+    <div class="anatomy">
+      <div><b>Body</b><span>Light single-hue orb, pearl highlight, inner glow. Breathes, hops, leans.</span></div>
+      <div><b>Eyes and lids</b><span>Ink ovals with a catchlight. Lid height and angle set the mood.</span></div>
+      <div><b>Mouth</b><span>Smile, grin, "o", flat or soft. Small, and changes with the moment.</span></div>
+      <div><b>Blush and aura</b><span>Persimmon 300 blush when pleased. A faint glow, which becomes rings when listening.</span></div>
     </div>
   </section>
 
-  <section class="band" aria-labelledby="s-motion">
-    <div class="band-head">
-      <div class="eyebrow">Motion</div>
-      <h2 id="s-motion">Everything is born from Hunch</h2>
-      <p class="lede">Hunch thinks out loud in short chips, then the answer grows out of it: scale from Hunch's position, blur 8 px to sharp, rise 16 px. Springs everywhere, so any motion can be interrupted.</p>
+  <section id="colour" aria-labelledby="h-colour">
+    <div class="head">
+      <span class="label">02 · Colour</span>
+      <h2 id="h-colour">Persimmon and Stone. Nothing else.</h2>
+      <p>One warm brand hue and one neutral. The light end of persimmon does most of the work; the strong tone appears once per screen at most.</p>
     </div>
-    <div class="demo">
-      <div class="demo-box" aria-live="polite">
-        <canvas data-hunch="idle" data-size="96" id="demo-hunch" data-look="0,.5"></canvas>
+    <div class="ramp">
+      <span class="label">Persimmon</span>
+      <div class="ramp-row" id="ramp-p"></div>
+    </div>
+    <div class="ramp">
+      <span class="label">Stone</span>
+      <div class="ramp-row stone" id="ramp-s"></div>
+    </div>
+    <div class="ramp">
+      <span class="label">Proportion on any screen</span>
+      <div class="ratio">
+        <div style="flex:90;background:var(--s0);color:var(--s600)">Stone · 90%</div>
+        <div style="flex:8;background:var(--p100);color:var(--p700)">8%</div>
+        <div style="flex:2;background:var(--p500);padding:0"></div>
+      </div>
+    </div>
+    <div class="cols3">
+      <div class="grad"><div class="swatch" style="background:var(--wash)"></div><div><b>Wash</b><span>Persimmon 50 to white. Top of a screen, behind Hunch.</span></div></div>
+      <div class="grad"><div class="swatch" style="background:var(--orb)"></div><div><b>Orb</b><span>Persimmon 50 → 200 → 400. Only Hunch and the mic.</span></div></div>
+      <div class="grad"><div class="swatch" style="background:var(--shimmer)"></div><div><b>Shimmer</b><span>Moves across text while Hunch is thinking.</span></div></div>
+    </div>
+    <div class="rules">
+      <div class="rule"><div class="ex" style="background:var(--s50)"><span class="btn primary">Order · <span class="mono">₹289</span></span></div><b>The main button is ink</b><p>Orange buttons shout. Ink feels confident and lets the food photo stay the colourful thing.</p></div>
+      <div class="rule"><div class="ex" style="background:var(--s50)"><span class="chip brand"><svg class="ico"><use href="#i-tag"/></svg>Save ₹54</span></div><b>Brand tints mean "Hunch did this"</b><p>Persimmon 50–100 marks things Hunch found for you: the pick, an offer, a saving.</p></div>
+      <div class="rule"><div class="ex" style="background:var(--s50)"><span class="functional"><span><i class="vm" style="--c:var(--veg)"></i>Veg</span><span><i class="vm nv" style="--c:var(--nonveg)"></i>Non-veg</span><span style="color:var(--error)">Error</span></span></div><b>Functional colours stay functional</b><p>Veg marks and errors use their own colours, always small, never as decoration.</p></div>
+    </div>
+  </section>
+
+  <section id="type" aria-labelledby="h-type">
+    <div class="head">
+      <span class="label">03 · Type</span>
+      <h2 id="h-type">One family, Geist</h2>
+      <p>Calm and precise. Hunch provides the personality, so the type doesn't need to. Mono for every price, time and calorie count; Mukta for Hindi.</p>
+    </div>
+    <div class="scale">
+      <div class="ts"><code>display</code><div class="sample" style="font:600 40px/44px var(--f);letter-spacing:-.02em">Baarish aur biryani?</div><div class="spec">40 / 44 · 600</div></div>
+      <div class="ts"><code>title</code><div class="sample" style="font:600 28px/34px var(--f);letter-spacing:-.015em">Chicken Dum Biryani</div><div class="spec">28 / 34 · 600</div></div>
+      <div class="ts"><code>heading</code><div class="sample" style="font:600 20px/26px var(--f);letter-spacing:-.01em">Found 3 bowls under ₹300</div><div class="spec">20 / 26 · 600</div></div>
+      <div class="ts"><code>body</code><div class="sample" style="font:400 16px/24px var(--f)">Your Friday usual from Meghana's. Same spice level, extra raita.</div><div class="spec">16 / 24 · 400</div></div>
+      <div class="ts"><code>label</code><div class="sample" style="font:500 14px/20px var(--f)">Order now · Something lighter</div><div class="spec">14 / 20 · 500</div></div>
+      <div class="ts"><code>caption</code><div class="sample" style="font:500 12px/16px var(--f);color:var(--s500)">Meghana Foods · Indiranagar</div><div class="spec">12 / 16 · 500</div></div>
+      <div class="ts"><code>numeric</code><div class="sample mono" style="font-size:14px;line-height:20px;font-weight:500">₹289 · 32 min · 780 kcal · 4.6★</div><div class="spec">Mono 14 / 20 · 500</div></div>
+      <div class="ts"><code>hindi</code><div class="sample" style="font:600 24px/32px var(--hi)">बारिश और बिरयानी? आपका रोज़ वाला ऑर्डर तैयार है।</div><div class="spec">Mukta · same scale</div></div>
+    </div>
+  </section>
+
+  <section id="space" aria-labelledby="h-space">
+    <div class="head">
+      <span class="label">04 · Space, radius, elevation</span>
+      <h2 id="h-space">Shadows and space instead of borders</h2>
+      <p>Objects separate by spacing and soft lift. Radius grows with size: chips and buttons are full pills, cards 24, sheets 32.</p>
+    </div>
+    <div class="comp">
+      <div class="card"><span class="label">Spacing · 4 px base</span>
+        <div class="space" id="space-scale"></div>
+      </div>
+      <div class="card"><span class="label">Radius</span>
+        <div class="radii">
+          <div><i style="border-radius:8px"></i>xs 8</div><div><i style="border-radius:12px"></i>sm 12</div><div><i style="border-radius:16px"></i>md 16</div>
+          <div><i style="border-radius:24px"></i>lg 24</div><div><i style="border-radius:32px"></i>xl 32</div><div><i style="border-radius:999px"></i>full</div>
+        </div>
+      </div>
+    </div>
+    <div class="comp">
+      <div class="card"><span class="label">Elevation</span>
+        <div class="elev">
+          <div><b>e0 · flat</b>Content on canvas</div>
+          <div style="box-shadow:var(--e1)"><b>e1 · rest</b>Cards</div>
+          <div style="box-shadow:var(--e2)"><b>e2 · raised</b>Hunch Pick</div>
+          <div style="box-shadow:var(--e3)"><b>e3 · floating</b>Island, sheets</div>
+        </div>
+      </div>
+      <div class="card"><span class="label">Frost material</span>
+        <div class="frost"><canvas class="plate" data-plate="biryani" data-size="150"></canvas><div class="pill">White 72% · blur 20</div></div>
+        <p class="muted" style="font-size:13px">For the Island and the composer when they float over content.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="icons" aria-labelledby="h-icons">
+    <div class="head">
+      <span class="label">05 · Icons</span>
+      <h2 id="h-icons">Line icons, 1.5 px, round ends</h2>
+      <p>24 px grid. Stone 600 at rest, ink when active. Only the Hunch sparkle uses persimmon. Production uses Phosphor Regular to match.</p>
+    </div>
+    <div class="icons" id="icon-grid"></div>
+  </section>
+
+  <section id="components" aria-labelledby="h-components">
+    <div class="head">
+      <span class="label">06 · Components</span>
+      <h2 id="h-components">The building blocks</h2>
+      <p>Every answer Hunch gives is assembled from these. Each has one job and one look.</p>
+    </div>
+    <div class="comp">
+      <div class="card">
+        <span class="label">Buttons</span>
+        <div class="stack">
+          <button class="btn lg primary">Order · <span class="mono">₹289</span></button>
+          <button class="btn lg soft">Switch &amp; save <span class="mono">₹54</span></button>
+        </div>
+        <div class="stack">
+          <button class="btn secondary">Something lighter</button>
+          <button class="btn text">Not today</button>
+          <button class="btn disabled" aria-disabled="true">Closed now</button>
+        </div>
+        <div class="stack">
+          <button class="btn sm primary">Add</button>
+          <button class="btn icon" aria-label="Add to order"><svg class="ico"><use href="#i-plus"/></svg></button>
+          <button class="btn icon" aria-label="Send"><svg class="ico"><use href="#i-send"/></svg></button>
+          <span class="micbtn" aria-hidden="true"><svg class="ico" style="width:22px;height:22px"><use href="#i-mic"/></svg></span>
+          <span class="micbtn live" aria-hidden="true"><svg class="ico" style="width:22px;height:22px"><use href="#i-mic"/></svg></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <span class="label">Chips</span>
+        <div class="col">
+          <span class="muted" style="font-size:13px">Thought: why Hunch picked this</span>
+          <div class="stack">
+            <span class="chip thought"><svg class="ico"><use href="#i-sparkle"/></svg>Raining → comfort food</span>
+            <span class="chip thought"><svg class="ico"><use href="#i-sparkle"/></svg>Your Friday usual</span>
+          </div>
+        </div>
+        <div class="col">
+          <span class="muted" style="font-size:13px">Context</span>
+          <div class="stack">
+            <span class="chip ctx"><svg class="ico"><use href="#i-clock"/></svg>6:40 PM</span>
+            <span class="chip ctx"><svg class="ico"><use href="#i-cloud"/></svg>Light rain</span>
+            <span class="chip ctx"><svg class="ico"><use href="#i-pin"/></svg>Indiranagar</span>
+          </div>
+        </div>
+        <div class="col">
+          <span class="muted" style="font-size:13px">Filter and offer</span>
+          <div class="stack">
+            <span class="chip sel"><svg class="ico"><use href="#i-protein"/></svg>High protein</span>
+            <span class="chip"><svg class="ico"><use href="#i-leaf"/></svg>Veg</span>
+            <span class="chip"><svg class="ico"><use href="#i-flame"/></svg>Spicy</span>
+            <span class="chip brand"><svg class="ico"><use href="#i-tag"/></svg>20% off</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <span class="label">Island</span>
+        <div class="islands">
+          <span class="island"><canvas data-hunch="idle" data-size="44"></canvas></span>
+          <span class="island open"><canvas data-hunch="thinking" data-size="44"></canvas><span class="shim">Checking 14 kitchens near you</span></span>
+          <span class="island open"><canvas data-hunch="found" data-size="44"></canvas><span>Found 3 bowls under ₹300</span></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <span class="label">Composer</span>
+        <div class="composer"><span class="ph">Ask Hunch for anything…</span><span class="micbtn" style="width:48px;height:48px" aria-hidden="true"><svg class="ico"><use href="#i-mic"/></svg></span></div>
+        <div class="composer listening"><div class="wave" id="wave"></div><span class="wave-label">Sun raha hoon…</span><span class="stop" aria-hidden="true"><i></i></span></div>
+      </div>
+
+      <div class="card">
+        <span class="label">Hunch Pick</span>
+        <div class="pick">
+          <canvas class="plate" data-plate="biryani" data-size="168" style="filter:drop-shadow(0 18px 22px rgba(26,24,22,.14))"></canvas>
+          <span class="tag"><svg class="ico"><use href="#i-sparkle"/></svg>Hunch pick</span>
+          <h3>Chicken Dum Biryani</h3>
+          <span class="meta">Meghana Foods · ₹289 · 32 min · 4.6★</span>
+          <div class="stack" style="justify-content:center">
+            <span class="chip thought"><svg class="ico"><use href="#i-sparkle"/></svg>Raining → comfort</span>
+            <span class="chip thought"><svg class="ico"><use href="#i-sparkle"/></svg>Your Friday usual</span>
+          </div>
+          <div class="stack" style="width:100%;flex-wrap:nowrap">
+            <button class="btn lg secondary" style="flex:1">Lighter</button>
+            <button class="btn lg primary" style="flex:2">Order · <span class="mono">₹289</span></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <span class="label">Dish rows, offer, undo</span>
+        <div class="dish"><canvas class="plate" data-plate="bowl" data-size="72"></canvas><div class="body"><div class="name"><i class="vm nv" style="--c:var(--nonveg)"></i><span>Grilled Chicken Bowl</span></div><span class="rest">FitBowl Co.</span><span class="meta">₹269 · 26 min · 38 g protein</span></div><button class="btn icon" aria-label="Add Grilled Chicken Bowl"><svg class="ico"><use href="#i-plus"/></svg></button></div>
+        <div class="dish"><canvas class="plate" data-plate="dal" data-size="72"></canvas><div class="body"><div class="name"><i class="vm" style="--c:var(--veg)"></i><span>Dal Makhani + 2 Naan</span></div><span class="rest">Punjabi Angithi</span><span class="meta">₹238 · 28 min · 4.5★</span></div><button class="btn icon" aria-label="Add Dal Makhani"><svg class="ico"><use href="#i-plus"/></svg></button></div>
+        <div class="offer"><svg class="ico"><use href="#i-tag"/></svg><div class="t"><span>Same bowl is 20% off at FitBowl Co.</span><span class="save">Save ₹54</span></div><button class="btn sm soft" style="background:var(--p100)">Switch</button></div>
+        <div class="toast"><span class="t">Order placed · <span class="mono">₹335</span></span><span class="undo"><svg class="ring" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" stroke="rgba(255,255,255,.2)"/><circle id="undo-ring" cx="10" cy="10" r="8" stroke="#fff" stroke-dasharray="50.3" stroke-dashoffset="0" stroke-linecap="round"/></svg>Undo</span></div>
+        <div class="err"><svg class="ico" style="width:16px;height:16px"><use href="#i-close"/></svg>Payment didn't go through. Your bank declined it. Try UPI instead.</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="motion" aria-labelledby="h-motion">
+    <div class="head">
+      <span class="label">07 · Motion</span>
+      <h2 id="h-motion">Everything is born from Hunch</h2>
+      <p>Hunch thinks out loud in a few chips, then the answer grows out of it. Only Hunch moves on its own; the rest stays still until touched.</p>
+    </div>
+    <div class="motion">
+      <div class="demo" aria-live="polite">
+        <span class="island" id="demo-island"><canvas data-hunch="idle" data-size="56" id="demo-hunch"></canvas></span>
         <div class="chips" id="demo-chips"></div>
-        <div id="demo-out" class="pick"></div>
-        <button class="btn masala" id="demo-go" style="margin-top:auto">Ask: “something cosy, under ₹250”</button>
+        <div id="demo-out" style="width:100%;max-width:320px"></div>
+        <button class="btn lg primary" id="demo-go" style="margin-top:auto">Ask: “something cosy, under ₹250”</button>
       </div>
       <div class="tokens">
-        <div><code>spring.snappy</code><span>stiffness 420 · damping 32. Taps, chips, toggles.</span></div>
-        <div><code>spring.gentle</code><span>stiffness 200 · damping 28. Sheets and cards settling. The only spring in checkout and support.</span></div>
-        <div><code>spring.bouncy</code><span>stiffness 320 · damping 14. Found it, offer accepted.</span></div>
+        <div><code>spring.snappy</code><span>420 / 32. Taps, chips, toggles.</span></div>
+        <div><code>spring.gentle</code><span>200 / 28. Sheets and cards settling. The only spring in checkout and support.</span></div>
+        <div><code>spring.bouncy</code><span>320 / 14. Found it, offer accepted.</span></div>
         <div><code>dur.micro</code><span>120 ms. Press states.</span></div>
-        <div><code>dur.base</code><span>240 ms. Fades and colour shifts between moods.</span></div>
-        <div><code>dur.emerge</code><span>420 ms. Generated UI arriving.</span></div>
-        <div><code>stagger</code><span>40 ms between chips and carousel plates.</span></div>
-        <div><code>breath</code><span>4 s cycle. Only Hunch and the primary action breathe.</span></div>
-        <div><code>reduced</code><span>Blink and colour stay. Wobble, travel and bounce go. Emergence becomes a 200 ms fade.</span></div>
+        <div><code>dur.base</code><span>240 ms. Fades and mood changes.</span></div>
+        <div><code>dur.emerge</code><span>420 ms. Generated UI arriving: scale from Hunch, blur 8 → 0, rise 16 → 0.</span></div>
+        <div><code>stagger</code><span>40 ms between chips and list items.</span></div>
+        <div><code>breath</code><span>4 s. Hunch only.</span></div>
+        <div><code>reduced</code><span>Blinks and expressions stay. Wobble, hops and travel go. Emergence becomes a 200 ms fade.</span></div>
       </div>
-    </div>
-  </section>
-
-  <section class="band" aria-labelledby="s-color">
-    <div class="band-head">
-      <div class="eyebrow">Colour</div>
-      <h2 id="s-color">A warm canvas, so the food carries the colour</h2>
-      <p class="lede">Masala belongs to Hunch and the main action. Each flavour owns one part of the journey. Groups are made with soft colour pools and food-tinted shadows, never with borders.</p>
-    </div>
-    <div class="masala-bar">Masala · #FFB547 → #FF6A3D → #E2366E</div>
-    <div class="swatches">
-      <div class="sw" style="--c:var(--saffron)"><div class="orb"></div><b>Saffron</b><span>#FF9F1C · Discovery, the Hunch Pick</span></div>
-      <div class="sw" style="--c:var(--chili)"><div class="orb"></div><b>Chili</b><span>#F2542D · Primary action, cart</span></div>
-      <div class="sw" style="--c:var(--gold)"><div class="orb"></div><b>Gold</b><span>#E9A800 · Offers and savings</span></div>
-      <div class="sw" style="--c:var(--basil)"><div class="orb"></div><b>Basil</b><span>#1F9D55 · Goals, protein, veg</span></div>
-      <div class="sw" style="--c:var(--lagoon)"><div class="orb"></div><b>Lagoon</b><span>#2F7CF0 · Tracking, delivery</span></div>
-      <div class="sw" style="--c:var(--lavender)"><div class="orb"></div><b>Lavender</b><span>#8B7CF2 · Support</span></div>
-      <div class="sw" style="--c:var(--indigo)"><div class="orb"></div><b>Indigo</b><span>#3D3A8C · Night, scheduled</span></div>
-    </div>
-    <div class="base">
-      <div><i style="--c:var(--canvas)"></i>Canvas #FAF9F6</div>
-      <div><i style="--c:var(--surface)"></i>Surface #FFFFFF</div>
-      <div><i style="--c:var(--tint)"></i>Tint #F2EFEA</div>
-      <div><i style="--c:var(--ink-3)"></i>Ink 3 #ABA398</div>
-      <div><i style="--c:var(--ink-2)"></i>Ink 2 #6E665B</div>
-      <div><i style="--c:var(--ink)"></i>Ink #1A1611</div>
-    </div>
-  </section>
-
-  <section class="band" aria-labelledby="s-type">
-    <div class="band-head">
-      <div class="eyebrow">Type</div>
-      <h2 id="s-type">Hunch's voice has its own face</h2>
-    </div>
-    <div class="type">
-      <div class="spec"><span class="eyebrow">Display · Hunch speaking, dish names</span><span class="big" style="font-family:var(--f-display);font-weight:750">Biryani?</span><p>Bricolage Grotesque, 600–750. Warm and a little quirky, so Hunch sounds like a character.</p></div>
-      <div class="spec"><span class="eyebrow">UI · Body</span><span class="big" style="font-family:var(--f-ui);font-weight:600;font-size:44px">Deliver to Home</span><p>Instrument Sans, 400–600. Compact and legible from 12 to 16 px.</p></div>
-      <div class="spec"><span class="eyebrow">Numbers · ₹, minutes, kcal</span><span class="big mono" style="font-weight:600">₹289 · 32m</span><p>Geist Mono, 500. Prices and ETAs line up and read as exact.</p></div>
-      <div class="spec"><span class="eyebrow">Devanagari</span><span class="big" style="font-family:var(--f-hi);font-weight:600;font-size:48px">बारिश और बिरयानी?</span><p>Mukta, 400–600. Sits beside Instrument Sans at the same weight for Hindi replies.</p></div>
-    </div>
-  </section>
-
-  <section class="band" aria-labelledby="s-stages">
-    <div class="band-head">
-      <div class="eyebrow">Stage map</div>
-      <h2 id="s-stages">Who owns which colour, mood and moment</h2>
-    </div>
-    <div class="scroll">
-      <table>
-        <thead><tr><th>Stage</th><th>Pool</th><th>Hunch mood</th><th>Signature moment</th></tr></thead>
-        <tbody>
-          <tr><td><b>Onboarding</b></td><td><span class="dot" style="--c:#FF6A3D"></span>Masala</td><td>Idle → Found it</td><td>Hunch tastes you: tap plates as they float by, pick goals and language.</td></tr>
-          <tr><td><b>Now</b></td><td><span class="dot" style="--c:#FFB08A"></span>Time of day</td><td>Idle</td><td>Context chip and one ready Hunch Pick before you type.</td></tr>
-          <tr><td><b>Conversation</b></td><td><span class="dot" style="--c:var(--saffron)"></span>Saffron</td><td>Listening → Thinking → Found it</td><td>Thought chips stream, then the answer grows from the island.</td></tr>
-          <tr><td><b>Restaurant &amp; dish</b></td><td><span class="dot" style="--c:#C9781F"></span>The dish's own colour</td><td>Idle</td><td>Full-bleed photo, plate cut-out, review digest in three phrases.</td></tr>
-          <tr><td><b>Offers</b></td><td><span class="dot" style="--c:var(--gold)"></span>Gold</td><td>Deal</td><td>Interception card with a glint, saving shown in rupees.</td></tr>
-          <tr><td><b>Checkout</b></td><td><span class="dot" style="--c:var(--ink)"></span>Ink</td><td>Trust</td><td>Everything stills. One button. Undo instead of confirm.</td></tr>
-          <tr><td><b>Tracking</b></td><td><span class="dot" style="--c:var(--lagoon)"></span>Lagoon</td><td>On the way</td><td>Hunch leaves the island and rides the route.</td></tr>
-          <tr><td><b>Support</b></td><td><span class="dot" style="--c:var(--lavender)"></span>Lavender</td><td>Care</td><td>The fix is offered before any question is asked.</td></tr>
-          <tr><td><b>Proactive</b></td><td><span class="dot" style="--c:#F07A7A"></span>Dusk</td><td>Peeking</td><td>Hunch peeks from the top edge at your usual time.</td></tr>
-          <tr><td><b>Late night</b></td><td><span class="dot" style="--c:var(--indigo)"></span>Indigo</td><td>Sleepy</td><td>Dimmer canvas, lighter portions suggested.</td></tr>
-        </tbody>
-      </table>
     </div>
   </section>
 </div>
@@ -464,24 +510,30 @@ td b{font-family:var(--f-display);font-size:15px}
 (() => {
 const TAU = Math.PI * 2;
 const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
-const hex = h => [1,3,5].map(i => parseInt(h.slice(i, i + 2), 16));
+const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
 const rgba = (c, a = 1) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`;
 const mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
+const lerp = (a, b, t) => a + (b - a) * t;
 const WHITE = [255, 255, 255];
 
+const P = { 50: '#FFF7F2', 100: '#FFEDE2', 200: '#FFDCC8', 300: '#FFC2A2', 400: '#FFA273', 500: '#F57F48', 600: '#DC6431', 700: '#B54C22', 800: '#8A3A1B', 900: '#5E2812' };
+const S = { 0: '#FFFFFF', 25: '#FBFAF9', 50: '#F5F4F2', 100: '#ECEAE7', 200: '#DEDBD6', 300: '#C5C1BB', 400: '#A09B94', 500: '#7A756E', 600: '#5C5852', 700: '#45413C', 800: '#2B2825', 900: '#1A1816' };
+const INK = hex(S[800]), BODY = [hex(P[50]), hex(P[200]), hex(P[400])], DULL = [hex(S[25]), hex(S[100]), hex(S[300])];
+const BLUSH = hex(P[300]);
+
+// lidTop: 0 open … 1 closed. lidAng: + raises inner corners (worried), − lowers them (focused).
 const MOODS = {
-  idle:      { label: 'Idle',       cols: ['#FFC46B','#FF6A3D','#E2366E'], wob: .045, speed: 1,   aura: .30, eyes: 'open',  note: 'Waiting for you. Breathes slowly, eyes follow your finger.' },
-  listening: { label: 'Listening',  cols: ['#FFD27A','#FF7A3D','#F0457A'], wob: .06,  speed: 1.4, aura: .42, eyes: 'open',  rings: true, look: [0, -.7], note: 'Mic is on. The aura rings move with your voice.' },
-  thinking:  { label: 'Thinking',   cols: ['#FFC46B','#FF6A3D','#E2366E'], wob: .09,  speed: 2.2, aura: .34, eyes: 'scan',  specks: true, cycle: true, note: 'Working. Colour walks through ingredients, eyes scan.' },
-  found:     { label: 'Found it',   cols: ['#FFC46B','#FF6A3D','#E2366E'], wob: .05,  speed: 1.2, aura: .38, eyes: 'happy', pop: true, sparkle: true, note: 'Pick ready. A squash-and-pop bounce and a happy squint.' },
-  deal:      { label: 'Deal',       cols: ['#FFE08A','#F2B400','#C77800'], wob: .05,  speed: 1.2, aura: .40, eyes: 'wink',  glint: true, sparkle: true, pop: true, note: 'Found you a better offer. Turns gold, glints and winks.' },
-  trust:     { label: 'Trust',      cols: ['#544A3E','#2A241D','#15110C'], wob: .012, speed: .5,  aura: .12, eyes: 'open',  rim: '#FFB547', note: 'Checkout. Still, calm and serious about your money.' },
-  track:     { label: 'On the way', cols: ['#9CC8FF','#2F7CF0','#1C4FB0'], wob: .04,  speed: 1.1, aura: .30, eyes: 'open',  specks: true, look: [.7, -.2], note: 'Tracking. Rides the route with your order.' },
-  care:      { label: 'Care',       cols: ['#D7D0FF','#8B7CF2','#5B4BCF'], wob: .03,  speed: .6,  aura: .28, eyes: 'soft',  droop: true, look: [0, .35], note: 'Support. Slower, softer, eyes lowered while it fixes things.' },
-  sleepy:    { label: 'Sleepy',     cols: ['#8E8BE6','#3D3A8C','#1F1D52'], wob: .025, speed: .45, aura: .20, eyes: 'half',  look: [0, .3], note: 'Late night. Heavy-lidded, suggests something light.' },
+  idle:      { label: 'Idle',       note: 'Waiting. Slow breath, relaxed lids, small smile.', eyes: 'open',  lidTop: .06, lidAng: 0,   lidBot: 0,   scale: 1,    mouth: 'smile', mw: .13, cheek: .25, wob: .03,  speed: 1,   tilt: 0 },
+  listening: { label: 'Listening',  note: 'Mic on. Wide eyes, mouth and rings follow your voice.', eyes: 'open', lidTop: 0, lidAng: 0, lidBot: 0, scale: 1.12, mouth: 'o', mw: .12, cheek: .15, wob: .04, speed: 1.3, tilt: 0, rings: true, look: [0, -.55] },
+  thinking:  { label: 'Thinking',   note: 'Working on it. Narrowed eyes look up and around, mouth to one side.', eyes: 'open', lidTop: .38, lidAng: -.12, lidBot: 0, scale: 1, mouth: 'flat', mw: .12, cheek: 0, wob: .06, speed: 2, tilt: -.05, dots: true, scan: true },
+  found:     { label: 'Found it',   note: 'Pick ready. Happy squint, grin, blush and a hop.', eyes: 'happy', lidTop: 0, lidAng: 0, lidBot: 0, scale: 1, mouth: 'grin', mw: .15, cheek: .7, wob: .04, speed: 1.2, tilt: 0, pop: true, sparkle: true },
+  delighted: { label: 'Delighted',  note: 'Better deal found. Wide sparkly eyes, open grin.', eyes: 'open', lidTop: 0, lidAng: .06, lidBot: .12, scale: 1.18, mouth: 'grin', mw: .17, cheek: .55, wob: .04, speed: 1.3, tilt: 0, pop: true, sparkle: true, twinkle: true },
+  focused:   { label: 'Focused',    note: 'Checkout. Steady lids, nearly still. Serious about your money.', eyes: 'open', lidTop: .22, lidAng: -.05, lidBot: 0, scale: .95, mouth: 'soft', mw: .1, cheek: .05, wob: .01, speed: .5, tilt: 0, look: [0, .2] },
+  onway:     { label: 'On the way', note: 'Tracking. Leans forward and looks ahead.', eyes: 'open', lidTop: .1, lidAng: -.04, lidBot: 0, scale: 1, mouth: 'smile', mw: .12, cheek: .2, wob: .035, speed: 1.4, tilt: .14, look: [.75, -.05], lines: true },
+  care:      { label: 'Care',       note: 'Support. Worried brows, eyes down, slower and softer.', eyes: 'open', lidTop: .26, lidAng: .3, lidBot: 0, scale: .96, mouth: 'soft', mw: .09, cheek: .12, wob: .02, speed: .6, tilt: 0, look: [0, .45], dull: .25 },
+  sleepy:    { label: 'Sleepy',     note: 'Late night. Heavy lids, tiny yawn.', eyes: 'open', lidTop: .62, lidAng: .05, lidBot: 0, scale: 1, mouth: 'tiny', mw: .1, cheek: .1, wob: .02, speed: .4, tilt: -.06, look: [0, .25], dull: .35, zz: true },
 };
-const CYCLE = [['#FFC46B','#FF6A3D','#E2366E'],['#C9EE8A','#1F9D55','#0F6B3A'],['#FFE08A','#F2B400','#C77800'],['#FF9E8A','#F2542D','#A81E3D'],['#9CC8FF','#2F7CF0','#1C4FB0']].map(c => c.map(hex));
-Object.values(MOODS).forEach(m => m.rgb = m.cols.map(hex));
+const NUM = ['lidTop', 'lidAng', 'lidBot', 'scale', 'mw', 'cheek', 'wob', 'speed', 'tilt'];
 
 const pointer = { x: 0, y: 0, at: -1e9 };
 addEventListener('pointermove', e => { pointer.x = e.clientX; pointer.y = e.clientY; pointer.at = performance.now(); }, { passive: true });
@@ -490,175 +542,201 @@ const HUNCHES = [];
 class Hunch {
   constructor(cv, o = {}) {
     this.cv = cv; this.ctx = cv.getContext('2d');
-    this.size = o.size || 120; this.follow = !!o.follow; this.baseLook = o.look || [0, 0];
-    const d = Math.min(devicePixelRatio || 1, 2);
-    cv.width = this.size * d; cv.height = this.size * d; cv.style.width = cv.style.height = this.size + 'px'; this.d = d;
-    this.state = o.state || 'idle';
+    this.size = o.size || 120; this.follow = !!o.follow;
+    const d = Math.min(devicePixelRatio || 1, 2); this.d = d;
+    cv.width = cv.height = this.size * d; cv.style.width = cv.style.height = this.size + 'px';
+    this.state = MOODS[o.state] ? o.state : 'idle';
     const m = MOODS[this.state];
-    this.col = m.rgb.map(c => c.slice()); this.wob = m.wob; this.spd = m.speed; this.aura = m.aura;
-    this.look = [0, 0]; this.t = Math.random() * 20; this.blinkAt = 0; this.nextBlink = performance.now() + 800 + Math.random() * 3000;
-    this.pop = 0; this.popPh = 0; this.visible = true;
+    this.v = {}; NUM.forEach(k => this.v[k] = m[k]); this.v.dull = m.dull || 0; this.v.ring = m.rings ? 1 : 0;
+    this.look = [0, 0]; this.t = Math.random() * 30; this.blinkAt = -1e9; this.nextBlink = performance.now() + 600 + Math.random() * 2500;
+    this.pop = 0; this.popPh = 0; this.visible = true; this.voice = 0;
     HUNCHES.push(this);
   }
-  set(s) {
-    if (!MOODS[s]) return;
-    this.state = s;
-    if (MOODS[s].pop) { this.pop = 1; this.popPh = 0; }
-  }
+  set(s) { if (!MOODS[s]) return; this.state = s; if (MOODS[s].pop) { this.pop = 1; this.popPh = 0; } this.blinkAt = performance.now(); }
   step(dt, now) {
-    const m = MOODS[this.state], k = 1 - Math.exp(-dt * 5);
-    let target = m.rgb;
-    if (m.cycle) target = CYCLE[Math.floor(now / 850) % CYCLE.length];
-    this.col = this.col.map((c, i) => mix(c, target[i], k));
-    this.wob += (m.wob * (REDUCE ? .25 : 1) - this.wob) * k;
-    this.spd += (m.speed - this.spd) * k;
-    this.aura += (m.aura - this.aura) * k;
-    this.t += dt * this.spd;
-    if (this.pop > 0) { this.popPh += dt * 10; this.pop *= Math.exp(-dt * 2.4); if (this.pop < .01) this.pop = 0; }
-    if (now > this.nextBlink) { this.blinkAt = now; this.nextBlink = now + 2600 + Math.random() * 3600; }
-    // where to look
-    let L = m.look || this.baseLook;
-    if (m.eyes === 'scan') L = [Math.sin(this.t * 1.6) * .85, -.1];
-    else if (this.follow && now - pointer.at < 2500) {
+    const m = MOODS[this.state], k = 1 - Math.exp(-dt * 7);
+    NUM.forEach(n => this.v[n] = lerp(this.v[n], n === 'wob' && REDUCE ? m[n] * .2 : m[n], k));
+    this.v.dull = lerp(this.v.dull, m.dull || 0, k);
+    this.v.ring = lerp(this.v.ring, m.rings ? 1 : 0, k);
+    this.t += dt * this.v.speed;
+    this.voice = m.rings ? .35 + .65 * Math.abs(Math.sin(now / 160) * Math.sin(now / 410)) : 0;
+    if (this.pop > 0) { this.popPh += dt * 10; this.pop *= Math.exp(-dt * 2.2); if (this.pop < .01) this.pop = 0; }
+    if (now > this.nextBlink) { this.blinkAt = now; this.nextBlink = now + 2400 + Math.random() * 3800; }
+    let L = m.look || [0, 0];
+    if (m.scan) L = [Math.sin(now / 700) * .7, -.45];
+    else if (this.follow && now - pointer.at < 3000 && !m.look) {
       const r = this.cv.getBoundingClientRect();
       const dx = pointer.x - (r.left + r.width / 2), dy = pointer.y - (r.top + r.height / 2);
-      const len = Math.hypot(dx, dy) || 1, s = Math.min(1, len / 260);
+      const len = Math.hypot(dx, dy) || 1, s = Math.min(1, len / 240);
       L = [dx / len * s, dy / len * s];
-    } else if (this.follow) L = [Math.sin(this.t * .37) * .5, Math.sin(this.t * .23) * .3];
-    this.look = mix(this.look, L, 1 - Math.exp(-dt * 8));
+    } else if (!m.look) L = [Math.sin(this.t * .31) * .35, Math.sin(this.t * .19) * .2];
+    this.look = mix(this.look, L, 1 - Math.exp(-dt * 9));
   }
-  blob(cx, cy, R, sx, sy) {
-    const c = this.ctx, t = this.t, w = this.wob;
+  blobPath(R, sx, sy) {
+    const c = this.ctx, t = this.t, w = this.v.wob;
     c.beginPath();
-    for (let i = 0; i <= 64; i++) {
-      const a = i / 64 * TAU;
-      const r = R * (1 + w * (Math.sin(3 * a + t * 1.3) * .55 + Math.sin(5 * a - t * 1.7) * .3 + Math.sin(2 * a + t * .8) * .45));
-      const x = cx + Math.cos(a) * r * sx, y = cy + Math.sin(a) * r * sy;
-      i ? c.lineTo(x, y) : c.moveTo(x, y);
+    for (let i = 0; i <= 72; i++) {
+      const a = i / 72 * TAU;
+      const r = R * (1 + w * (Math.sin(3 * a + t * 1.3) * .55 + Math.sin(5 * a - t * 1.7) * .25 + Math.sin(2 * a + t * .8) * .45));
+      i ? c.lineTo(Math.cos(a) * r * sx, Math.sin(a) * r * sy) : c.moveTo(Math.cos(a) * r * sx, Math.sin(a) * r * sy);
     }
     c.closePath();
   }
   draw(now) {
-    const c = this.ctx, S = this.size, m = MOODS[this.state], t = this.t;
-    c.setTransform(this.d, 0, 0, this.d, 0, 0); c.clearRect(0, 0, S, S);
-    const [c1, c2, c3] = this.col;
-    const R = S * .27;
-    const breath = 1 + Math.sin(t * 1.55) * .025;
-    let lift = 0, sx = breath, sy = breath;
-    if (this.pop && !REDUCE) { lift = Math.abs(Math.sin(this.popPh)) * R * .45 * this.pop; const q = Math.cos(this.popPh * 2) * .1 * this.pop; sx *= 1 + q; sy *= 1 - q; }
-    if (m.droop) sy *= .95;
-    const cx = S / 2, cy = S / 2 + (m.droop ? R * .05 : 0) - lift;
+    const c = this.ctx, Sz = this.size, m = MOODS[this.state], v = this.v, t = this.t;
+    c.setTransform(this.d, 0, 0, this.d, 0, 0); c.clearRect(0, 0, Sz, Sz);
+    const R = Sz * .3;
+    const cols = BODY.map((col, i) => mix(col, DULL[i], v.dull));
+    const breath = Math.sin(t * 1.55) * .02;
+    let lift = 0, sx = 1 + breath, sy = 1 + breath * .6;
+    if (this.pop && !REDUCE) { lift = Math.abs(Math.sin(this.popPh)) * R * .4 * this.pop; const q = Math.cos(this.popPh * 2) * .09 * this.pop; sx *= 1 + q; sy *= 1 - q; }
+    if (m.rings) { sx *= 1 + this.voice * .02; sy *= 1 + this.voice * .03; }
+    const cx = Sz / 2, cy = Sz / 2 - lift + R * .02;
 
     // ground shadow
-    c.fillStyle = 'rgba(26,22,17,.09)';
-    c.beginPath(); c.ellipse(S / 2, S / 2 + R * 1.3, R * .8 * (1 - lift / (R * 1.4)), R * .11, 0, 0, TAU); c.fill();
+    c.fillStyle = `rgba(26,24,22,${.07 * (1 - lift / (R * 1.2))})`;
+    c.beginPath(); c.ellipse(Sz / 2, Sz / 2 + R * 1.22, R * .72 * (1 - lift / (R * 2)), R * .09, 0, 0, TAU); c.fill();
 
     // aura
-    const ag = c.createRadialGradient(cx, cy, R * .5, cx, cy, R * 1.85);
-    ag.addColorStop(0, rgba(c2, this.aura * (.85 + .15 * Math.sin(t * 1.55)))); ag.addColorStop(1, rgba(c2, 0));
-    c.fillStyle = ag; c.beginPath(); c.arc(cx, cy, R * 1.85, 0, TAU); c.fill();
+    const ag = c.createRadialGradient(cx, cy, R * .6, cx, cy, R * 1.6);
+    ag.addColorStop(0, rgba(cols[1], .45)); ag.addColorStop(1, rgba(cols[1], 0));
+    c.fillStyle = ag; c.beginPath(); c.arc(cx, cy, R * 1.6, 0, TAU); c.fill();
 
-    // listening rings
-    if (m.rings) {
-      const lvl = .5 + .5 * Math.abs(Math.sin(t * 5.3) * Math.sin(t * 2.1));
-      for (let i = 0; i < 3; i++) {
-        const p = (t * .55 + i / 3) % 1;
-        c.strokeStyle = rgba(c2, (1 - p) * .45 * lvl); c.lineWidth = R * .05;
-        c.beginPath(); c.arc(cx, cy, R * (1.08 + p * .75 * lvl), 0, TAU); c.stroke();
-      }
+    if (v.ring > .02) for (let i = 0; i < 3; i++) {
+      const p = (now / 1500 + i / 3) % 1;
+      c.strokeStyle = rgba(hex(P[300]), (1 - p) * .55 * v.ring * (.5 + this.voice * .5)); c.lineWidth = Math.max(1, R * .035);
+      c.beginPath(); c.arc(cx, cy, R * (1.06 + p * .55), 0, TAU); c.stroke();
     }
 
-    // body
-    this.blob(cx, cy, R, sx, sy);
-    const bg = c.createRadialGradient(cx - R * .45, cy - R * .55, R * .05, cx + R * .1, cy + R * .1, R * 1.35);
-    bg.addColorStop(0, rgba(mix(c1, WHITE, .25))); bg.addColorStop(.45, rgba(c2)); bg.addColorStop(1, rgba(c3));
-    c.fillStyle = bg; c.fill();
+    // speed lines
+    if (m.lines && !REDUCE) {
+      c.strokeStyle = rgba(hex(P[300]), .8); c.lineCap = 'round'; c.lineWidth = Math.max(1.2, R * .06);
+      for (let i = 0; i < 3; i++) {
+        const p = (now / 700 + i * .33) % 1, y = cy + (i - 1) * R * .38, x0 = cx - R * 1.25 - p * R * .5;
+        c.globalAlpha = 1 - p; c.beginPath(); c.moveTo(x0, y); c.lineTo(x0 - R * .35, y); c.stroke();
+      }
+      c.globalAlpha = 1;
+    }
 
-    c.save(); this.blob(cx, cy, R, sx, sy); c.clip();
-    // swirl: lighter drifting core and a darker eddy
-    const swx = cx + Math.cos(t * .7) * R * .35, swy = cy + Math.sin(t * .9) * R * .3;
-    let g = c.createRadialGradient(swx, swy, 0, swx, swy, R * .75);
-    g.addColorStop(0, rgba(mix(c1, WHITE, .4), .55)); g.addColorStop(1, rgba(c1, 0));
-    c.fillStyle = g; c.fillRect(cx - R * 2, cy - R * 2, R * 4, R * 4);
-    const ex2 = cx + Math.cos(t * .5 + 2.4) * R * .5, ey2 = cy + Math.sin(t * .6 + 1.2) * R * .45;
-    g = c.createRadialGradient(ex2, ey2, 0, ex2, ey2, R * .6);
-    g.addColorStop(0, rgba(c3, .55)); g.addColorStop(1, rgba(c3, 0));
-    c.fillStyle = g; c.fillRect(cx - R * 2, cy - R * 2, R * 4, R * 4);
-    // deal glint
-    if (m.glint) {
-      const p = ((now / 2400) % 1) * 1.8 - .4;
-      c.save(); c.translate(cx, cy); c.rotate(-.6);
-      const gx = (p - .5) * R * 4;
-      const gg = c.createLinearGradient(gx - R * .3, 0, gx + R * .3, 0);
-      gg.addColorStop(0, 'rgba(255,255,255,0)'); gg.addColorStop(.5, 'rgba(255,255,255,.6)'); gg.addColorStop(1, 'rgba(255,255,255,0)');
-      c.fillStyle = gg; c.fillRect(gx - R * .3, -R * 2, R * .6, R * 4); c.restore();
+    c.save(); c.translate(cx, cy); c.rotate(v.tilt + this.look[0] * .04);
+    // body
+    this.blobPath(R, sx, sy);
+    let g = c.createRadialGradient(-R * .38, -R * .45, R * .05, 0, 0, R * 1.15);
+    g.addColorStop(0, rgba(cols[0])); g.addColorStop(.55, rgba(cols[1])); g.addColorStop(1, rgba(cols[2]));
+    c.fillStyle = g; c.fill();
+    c.save(); this.blobPath(R, sx, sy); c.clip();
+    // inner glow (translucent, like a gummy)
+    g = c.createRadialGradient(R * .35, R * .5, 0, R * .35, R * .5, R * .8);
+    g.addColorStop(0, 'rgba(255,255,255,.45)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+    c.fillStyle = g; c.fillRect(-R * 2, -R * 2, R * 4, R * 4);
+    // slow drifting swirl
+    const swx = Math.cos(t * .6) * R * .3, swy = Math.sin(t * .8) * R * .25;
+    g = c.createRadialGradient(swx, swy, 0, swx, swy, R * .7);
+    g.addColorStop(0, rgba(cols[0], .35)); g.addColorStop(1, rgba(cols[0], 0));
+    c.fillStyle = g; c.fillRect(-R * 2, -R * 2, R * 4, R * 4);
+    if (m.dots) { // thinking shimmer band
+      const p = ((now / 1600) % 1) * 3 - 1.5;
+      c.rotate(-.5);
+      const sg = c.createLinearGradient(p * R - R * .35, 0, p * R + R * .35, 0);
+      sg.addColorStop(0, 'rgba(255,255,255,0)'); sg.addColorStop(.5, 'rgba(255,255,255,.4)'); sg.addColorStop(1, 'rgba(255,255,255,0)');
+      c.fillStyle = sg; c.fillRect(-R * 2, -R * 2, R * 4, R * 4); c.rotate(.5);
     }
     c.restore();
+    // rim
+    this.blobPath(R, sx, sy); c.strokeStyle = rgba(cols[2], .35); c.lineWidth = Math.max(.8, R * .02); c.stroke();
+    // pearl highlight
+    c.save(); c.translate(-R * .42, -R * .5); c.rotate(-.6);
+    g = c.createRadialGradient(0, 0, 0, 0, 0, R * .3);
+    g.addColorStop(0, 'rgba(255,255,255,.95)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+    c.fillStyle = g; c.beginPath(); c.ellipse(0, 0, R * .3, R * .15, 0, 0, TAU); c.fill(); c.restore();
+    c.fillStyle = 'rgba(255,255,255,.9)'; c.beginPath(); c.arc(-R * .12, -R * .7, R * .035, 0, TAU); c.fill();
 
-    if (m.rim) { this.blob(cx, cy, R, sx, sy); c.strokeStyle = rgba(hex(m.rim), .9); c.lineWidth = Math.max(1.5, R * .06); c.stroke(); }
-
-    // glass highlight
-    c.save(); c.translate(cx - R * .4, cy - R * .5); c.rotate(-.55);
-    g = c.createRadialGradient(0, 0, 0, 0, 0, R * .32);
-    g.addColorStop(0, 'rgba(255,255,255,.75)'); g.addColorStop(1, 'rgba(255,255,255,0)');
-    c.fillStyle = g; c.beginPath(); c.ellipse(0, 0, R * .32, R * .16, 0, 0, TAU); c.fill(); c.restore();
-
-    this.eyes(cx, cy, R, m.eyes, now);
-
-    // orbiting specks
-    if (m.specks) for (let i = 0; i < 3; i++) {
-      const a = t * 1.6 + i * TAU / 3;
-      c.fillStyle = rgba(mix(c1, WHITE, .2), .9);
-      c.beginPath(); c.arc(cx + Math.cos(a) * R * 1.38, cy + Math.sin(a) * R * .55 * 1.38 * .9, R * (.05 + .02 * Math.sin(a)), 0, TAU); c.fill();
+    // face, slides toward look direction
+    const fx = this.look[0] * R * .2, fy = this.look[1] * R * .15 + R * .04;
+    if (v.cheek > .02) for (const s of [-1, 1]) {
+      const bg = c.createRadialGradient(fx + s * R * .5, fy + R * .14, 0, fx + s * R * .5, fy + R * .14, R * .17);
+      bg.addColorStop(0, rgba(BLUSH, .9 * v.cheek)); bg.addColorStop(1, rgba(BLUSH, 0));
+      c.fillStyle = bg; c.beginPath(); c.ellipse(fx + s * R * .5, fy + R * .14, R * .17, R * .11, 0, 0, TAU); c.fill();
     }
-    // sparkles
-    if (m.sparkle) for (let i = 0; i < 4; i++) {
-      const a = -2.2 + i * 1.25, ph = Math.sin(now / 380 + i * 1.7);
-      if (ph < 0) continue;
-      this.star(cx + Math.cos(a) * R * 1.45, cy + Math.sin(a) * R * 1.35, R * .14 * ph, rgba(mix(c1, WHITE, .3), ph));
+    this.eyes(fx, fy, R, m, now);
+    this.mouth(fx, fy + R * .27, R, m, now);
+    c.restore();
+
+    // orbiting dots while thinking
+    if (m.dots) for (let i = 0; i < 3; i++) {
+      const a = now / 500 + i * TAU / 3;
+      c.fillStyle = rgba(hex(P[400]), .5 + .4 * Math.sin(a));
+      c.beginPath(); c.arc(cx + Math.cos(a) * R * 1.32, cy + Math.sin(a) * R * .5 - R * .1, R * (.05 + .015 * Math.sin(a)), 0, TAU); c.fill();
+    }
+    if (m.sparkle) for (let i = 0; i < 3; i++) {
+      const a = -2.4 + i * 1.1, ph = Math.sin(now / 420 + i * 2.1);
+      if (ph > 0) this.star(cx + Math.cos(a) * R * 1.4, cy + Math.sin(a) * R * 1.3, R * .13 * ph, rgba(hex(P[400]), ph));
+    }
+    if (m.zz) for (let i = 0; i < 2; i++) {
+      const p = (now / 2600 + i * .5) % 1;
+      c.fillStyle = rgba(hex(S[400]), Math.sin(p * Math.PI));
+      c.font = `600 ${R * (.22 + p * .12)}px Geist, system-ui, sans-serif`;
+      c.fillText('z', cx + R * (.8 + p * .35), cy - R * (.75 + p * .55));
     }
   }
-  eyes(cx, cy, R, mode, now) {
-    const c = this.ctx;
-    const ex = R * .27, ew = R * .15, eh = R * .32;
-    const lx = this.look[0] * R * .15, ly = this.look[1] * R * .12;
-    let bl = 0; const bt = now - this.blinkAt;
-    if (bt < 170) bl = 1 - Math.abs(bt / 85 - 1);
-    c.save();
-    c.fillStyle = '#fff'; c.strokeStyle = '#fff'; c.lineCap = 'round';
-    c.shadowColor = 'rgba(255,255,255,.9)'; c.shadowBlur = R * .18;
+  eyes(fx, fy, R, m, now) {
+    const c = this.ctx, v = this.v;
+    const w = R * .17 * v.scale, h = R * .25 * v.scale, ex = R * .31, ey = fy - R * .08;
+    const bt = now - this.blinkAt; let bl = 0;
+    if (bt < 180) bl = 1 - Math.abs(bt / 90 - 1);
     for (const side of [-1, 1]) {
-      const x = cx + side * ex + lx, y = cy - R * .04 + ly;
-      const md = mode === 'wink' ? (side === 1 ? 'happy' : 'open') : mode;
-      if (md === 'happy') {
-        c.lineWidth = ew * .85;
-        c.beginPath(); c.arc(x, y + eh * .22, ew * .95, Math.PI * 1.12, Math.PI * 1.88); c.stroke();
+      const x = fx + side * ex;
+      if (m.eyes === 'happy') {
+        c.strokeStyle = rgba(INK); c.lineWidth = w * .55; c.lineCap = 'round';
+        c.beginPath(); c.arc(x, ey + h * .25, w * .85, Math.PI * 1.15, Math.PI * 1.85); c.stroke();
         continue;
       }
-      let h = eh, yy = y;
-      if (md === 'soft') { h *= .62; yy += eh * .16; }
-      if (md === 'half') { h *= .36; yy += eh * .24; }
-      h = Math.max(h * (1 - bl * .92), ew * .35);
-      c.beginPath(); c.roundRect(x - ew / 2, yy - h / 2, ew, h, Math.min(ew, h) / 2); c.fill();
+      const top = Math.min(1, Math.max(v.lidTop, bl));
+      c.save(); c.translate(x, ey);
+      c.save(); c.rotate(side * v.lidAng);
+      c.beginPath(); c.rect(-w * 3, -h / 2 + top * h * 1.05, w * 6, h * (1 - top - v.lidBot) + h * .02); c.rotate(-side * v.lidAng);
+      c.restore();
+      c.clip();
+      c.fillStyle = rgba(INK); c.beginPath(); c.ellipse(0, 0, w / 2, h / 2, 0, 0, TAU); c.fill();
+      c.fillStyle = 'rgba(255,255,255,.95)';
+      c.beginPath(); c.arc(-w * .12 + this.look[0] * w * .1, -h * .2, w * .2, 0, TAU); c.fill();
+      if (m.twinkle) { c.beginPath(); c.arc(w * .14, h * .12, w * .09, 0, TAU); c.fill(); }
+      c.restore();
+      if (top > .9) { // closed lid line
+        c.strokeStyle = rgba(INK); c.lineWidth = Math.max(1, h * .14); c.lineCap = 'round';
+        c.beginPath(); c.moveTo(x - w * .5, ey + h * .1); c.quadraticCurveTo(x, ey + h * .28, x + w * .5, ey + h * .1); c.stroke();
+      }
     }
-    c.restore();
+  }
+  mouth(x, y, R, m, now) {
+    const c = this.ctx, mw = R * this.v.mw;
+    c.strokeStyle = c.fillStyle = rgba(INK); c.lineCap = 'round'; c.lineWidth = Math.max(1.3, R * .055);
+    switch (m.mouth) {
+      case 'smile': c.beginPath(); c.arc(x, y - mw * .55, mw, Math.PI * .2, Math.PI * .8); c.stroke(); break;
+      case 'soft': c.beginPath(); c.arc(x, y - mw * 1.1, mw * 1.2, Math.PI * .35, Math.PI * .65); c.stroke(); break;
+      case 'flat': c.beginPath(); c.moveTo(x - mw * .2, y); c.lineTo(x + mw * .7, y - mw * .12); c.stroke(); break;
+      case 'tiny': { const o = .6 + .4 * Math.sin(now / 900); c.beginPath(); c.ellipse(x, y, mw * .22, mw * .28 * o, 0, 0, TAU); c.fill(); break; }
+      case 'o': { const o = .45 + this.voice * .75; c.beginPath(); c.ellipse(x, y, mw * .42, mw * .5 * o, 0, 0, TAU); c.fill(); break; }
+      case 'grin': {
+        c.beginPath(); c.moveTo(x - mw, y - mw * .15); c.quadraticCurveTo(x, y - mw * .3, x + mw, y - mw * .15);
+        c.quadraticCurveTo(x + mw * .8, y + mw * .95, x, y + mw * .95); c.quadraticCurveTo(x - mw * .8, y + mw * .95, x - mw, y - mw * .15); c.fill();
+        c.save(); c.clip(); c.fillStyle = rgba(hex(P[400])); c.beginPath(); c.ellipse(x, y + mw * .95, mw * .55, mw * .4, 0, 0, TAU); c.fill(); c.restore();
+        break;
+      }
+    }
   }
   star(x, y, r, col) {
     const c = this.ctx; c.fillStyle = col; c.beginPath();
-    for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, rr = i % 2 ? r * .3 : r; c[i ? 'lineTo' : 'moveTo'](x + Math.cos(a) * rr, y + Math.sin(a) * rr); }
+    for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4 - Math.PI / 2, rr = i % 2 ? r * .32 : r; c[i ? 'lineTo' : 'moveTo'](x + Math.cos(a) * rr, y + Math.sin(a) * rr); }
     c.closePath(); c.fill();
   }
 }
 
-// ---------- generated plates (placeholders for real photography) ----------
+// ---------- plate placeholders (production uses real top-down photography) ----------
 const RECIPES = {
-  biryani: { base: ['#F0B04A','#C9781F'], layers: [['grain','#FFF3D6',300,.05],['grain','#F59A1E',130,.05],['blob','#7A3B1A',9,.16],['blob','#9B4E22',7,.12],['ring','#F1D9B8',6,.1],['leaf','#3E8E3A',18,.07]] },
-  bowl:    { base: ['#EFE3C8','#D9C49A'], layers: [['grain','#F7EFDB',180,.045],['cube','#C8742E',12,.14],['leaf','#5FAE47',26,.11],['dot','#E2B85C',22,.06],['cube','#B9D98C',8,.09],['ring','#9E3A6E',5,.1],['dot','#2E2A25',26,.02]] },
-  salad:   { base: ['#8DC66A','#3F8A35'], layers: [['leaf','#B6E08A',36,.16],['leaf','#2F7A2C',26,.14],['dot','#E5453A',10,.11],['cube','#FFF8EE',10,.09],['dot','#2A2420',8,.05]] },
-  pizza:   { base: ['#F1C063','#D38E2F'], layers: [['dot','#FFE7A3',40,.09],['pep','#B3301E',13,.17],['leaf','#3E8E3A',8,.09]] },
-  tikka:   { base: ['#F3D9A6','#E2B66A'], layers: [['cube','#EE7A2E',11,.17],['ring','#7FB04A',6,.12],['ring','#B03A5B',6,.11],['dot','#2A2420',22,.025]] },
-  coffee:  { base: ['#C79A6B','#8A5A36'], layers: [['swirl','#F3E6D6',4,.5],['dot','#FFFFFF',8,.05]] },
-  dal:     { base: ['#8A4528','#4A2214'], layers: [['swirl','#FFF1DC',3,.5],['dot','#6A2E18',30,.06],['leaf','#3E8E3A',12,.07]] },
+  biryani: { base: ['#F0B04A', '#C9781F'], layers: [['grain', '#FFF3D6', 300, .05], ['grain', '#F59A1E', 130, .05], ['blob', '#7A3B1A', 9, .16], ['blob', '#9B4E22', 7, .12], ['ring', '#F1D9B8', 6, .1], ['leaf', '#3E8E3A', 18, .07]] },
+  bowl:    { base: ['#EFE3C8', '#D9C49A'], layers: [['grain', '#F7EFDB', 180, .045], ['cube', '#C8742E', 12, .14], ['leaf', '#5FAE47', 26, .11], ['dot', '#E2B85C', 22, .06], ['cube', '#B9D98C', 8, .09], ['ring', '#9E3A6E', 5, .1], ['dot', '#2E2A25', 26, .02]] },
+  dal:     { base: ['#8A4528', '#4A2214'], layers: [['swirl', '#FFF1DC', 3, .5], ['dot', '#6A2E18', 30, .06], ['leaf', '#3E8E3A', 12, .07]] },
 };
 function rng(seed) { let s = seed % 2147483647 || 1; return () => (s = s * 16807 % 2147483647) / 2147483647; }
 function drawPlate(cv, key, size) {
@@ -666,11 +744,11 @@ function drawPlate(cv, key, size) {
   const d = Math.min(devicePixelRatio || 1, 2);
   cv.width = cv.height = size * d; cv.style.width = cv.style.height = size + 'px';
   const c = cv.getContext('2d'); c.setTransform(d, 0, 0, d, 0, 0);
-  const cx = size / 2, cy = size / 2, P = size / 2 - 1, r = P * .78;
-  let g = c.createRadialGradient(cx - P * .3, cy - P * .3, P * .2, cx, cy, P);
-  g.addColorStop(0, '#FFFFFF'); g.addColorStop(.8, '#F6F3EE'); g.addColorStop(1, '#E4DED5');
-  c.fillStyle = g; c.beginPath(); c.arc(cx, cy, P, 0, TAU); c.fill();
-  c.fillStyle = 'rgba(26,22,17,.07)'; c.beginPath(); c.arc(cx + 1, cy + 2, r + 2, 0, TAU); c.fill();
+  const cx = size / 2, cy = size / 2, Pr = size / 2 - 1, r = Pr * .78;
+  let g = c.createRadialGradient(cx - Pr * .3, cy - Pr * .3, Pr * .2, cx, cy, Pr);
+  g.addColorStop(0, '#FFFFFF'); g.addColorStop(.82, '#F7F5F2'); g.addColorStop(1, '#E6E2DC');
+  c.fillStyle = g; c.beginPath(); c.arc(cx, cy, Pr, 0, TAU); c.fill();
+  c.fillStyle = 'rgba(26,24,22,.06)'; c.beginPath(); c.arc(cx + 1, cy + 2, r + 2, 0, TAU); c.fill();
   const [b1, b2] = rec.base.map(hex);
   g = c.createRadialGradient(cx - r * .3, cy - r * .3, r * .1, cx, cy, r);
   g.addColorStop(0, rgba(mix(b1, WHITE, .1))); g.addColorStop(1, rgba(b2));
@@ -680,102 +758,115 @@ function drawPlate(cv, key, size) {
     const C = hex(col);
     for (let i = 0; i < n; i++) {
       const a = rand() * TAU, rr = Math.sqrt(rand()) * r * .92, x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr;
-      const s = sz * r * (.75 + rand() * .5), rot = rand() * TAU;
-      c.save(); c.translate(x, y); c.rotate(rot);
+      const s = sz * r * (.75 + rand() * .5);
+      c.save(); c.translate(x, y); c.rotate(rand() * TAU);
       if (shape === 'grain') { c.fillStyle = rgba(C, .95); c.beginPath(); c.ellipse(0, 0, s * .5, s * .17, 0, 0, TAU); c.fill(); }
       else if (shape === 'leaf') { c.fillStyle = rgba(C); c.beginPath(); c.ellipse(0, 0, s * .5, s * .22, 0, 0, TAU); c.fill(); }
       else if (shape === 'dot') { c.fillStyle = rgba(C); c.beginPath(); c.arc(0, 0, s * .5, 0, TAU); c.fill(); }
       else if (shape === 'cube') { const q = c.createLinearGradient(-s / 2, -s / 2, s / 2, s / 2); q.addColorStop(0, rgba(mix(C, WHITE, .25))); q.addColorStop(1, rgba(mix(C, [40, 20, 10], .35))); c.fillStyle = q; c.beginPath(); c.roundRect(-s / 2, -s / 2, s, s, s * .25); c.fill(); }
       else if (shape === 'blob') { const q = c.createRadialGradient(-s * .15, -s * .15, 0, 0, 0, s * .6); q.addColorStop(0, rgba(mix(C, WHITE, .2))); q.addColorStop(1, rgba(mix(C, [30, 15, 5], .4))); c.fillStyle = q; c.beginPath(); c.ellipse(0, 0, s * .55, s * .42, 0, 0, TAU); c.fill(); }
       else if (shape === 'ring') { c.strokeStyle = rgba(C, .9); c.lineWidth = s * .16; c.beginPath(); c.arc(0, 0, s * .45, 0, TAU * .8); c.stroke(); }
-      else if (shape === 'pep') { c.fillStyle = rgba(C); c.beginPath(); c.arc(0, 0, s * .5, 0, TAU); c.fill(); c.fillStyle = rgba(mix(C, [40, 10, 5], .4)); for (let k = 0; k < 4; k++) { c.beginPath(); c.arc((rand() - .5) * s * .5, (rand() - .5) * s * .5, s * .06, 0, TAU); c.fill(); } }
       else if (shape === 'swirl') { c.strokeStyle = rgba(C, .85); c.lineWidth = r * .07; c.lineCap = 'round'; c.beginPath(); c.arc(0, 0, s * .5, 0, TAU * .55); c.stroke(); }
       c.restore();
     }
   }
   g = c.createRadialGradient(cx - r * .45, cy - r * .5, 0, cx - r * .45, cy - r * .5, r * .9);
-  g.addColorStop(0, 'rgba(255,255,255,.28)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  g.addColorStop(0, 'rgba(255,255,255,.25)'); g.addColorStop(1, 'rgba(255,255,255,0)');
   c.fillStyle = g; c.fillRect(0, 0, size, size);
   c.restore();
 }
 document.querySelectorAll('canvas[data-plate]').forEach(cv => drawPlate(cv, cv.dataset.plate, +cv.dataset.size));
 
-// ---------- mount Hunches ----------
-const hero = new Hunch(document.getElementById('hero'), { size: Math.min(380, Math.max(260, document.getElementById('stage').clientWidth * .8)), follow: true });
-const byEl = new Map();
-document.querySelectorAll('canvas[data-hunch]').forEach(cv => {
-  const look = cv.dataset.look ? cv.dataset.look.split(',').map(Number) : [0, 0];
-  byEl.set(cv, new Hunch(cv, { size: +cv.dataset.size, state: cv.dataset.hunch, look }));
-});
+// ---------- colour ramps ----------
+const rampP = document.getElementById('ramp-p'), rampS = document.getElementById('ramp-s');
+Object.entries(P).forEach(([k, h]) => rampP.insertAdjacentHTML('beforeend', `<div class="tone${k === '500' ? ' key' : ''}" style="--c:${h};--t:${+k >= 500 ? '#fff' : '#5E2812'}"><b>${k}</b><span>${h}</span></div>`));
+Object.entries(S).forEach(([k, h]) => rampS.insertAdjacentHTML('beforeend', `<div class="tone" style="--c:${h};--t:${+k >= 500 ? '#fff' : '#1A1816'}"><b>${k}</b><span>${h}</span></div>`));
 
-// only animate what is on screen
+// ---------- spacing ----------
+const sp = document.getElementById('space-scale');
+[4, 8, 12, 16, 20, 24, 32, 40, 56].forEach(n => sp.insertAdjacentHTML('beforeend', `<div><span>${n}</span><i style="width:${n * 3}px;max-width:100%"></i></div>`));
+
+// ---------- icons ----------
+const ig = document.getElementById('icon-grid');
+['sparkle', 'mic', 'send', 'bag', 'clock', 'pin', 'tag', 'shield', 'scooter', 'chat', 'star', 'flame', 'leaf', 'protein', 'check', 'close', 'chevron', 'undo', 'plus', 'cloud']
+  .forEach(n => ig.insertAdjacentHTML('beforeend', `<div><svg class="ico" style="width:24px;height:24px"><use href="#i-${n}"/></svg>${n}</div>`));
+
+// ---------- waveform ----------
+const wave = document.getElementById('wave');
+for (let i = 0; i < 26; i++) wave.insertAdjacentHTML('beforeend', '<i></i>');
+const bars = [...wave.children];
+
+// ---------- mount Hunches ----------
+const stageEl = document.getElementById('stage');
+const hero = new Hunch(document.getElementById('hero'), { size: Math.min(400, Math.max(260, stageEl.clientWidth * .78)), follow: true });
+const kit = document.getElementById('kit');
+Object.entries(MOODS).forEach(([k, m]) => {
+  kit.insertAdjacentHTML('beforeend', `<figure><canvas data-hunch="${k}" data-size="100"></canvas><figcaption><b>${m.label}</b><span>${{ idle: 'Waiting', listening: 'Mic on', thinking: 'Agent working', found: 'Pick ready', delighted: 'Better deal', focused: 'Checkout', onway: 'Tracking', care: 'Support', sleepy: 'Late night' }[k]}</span></figcaption></figure>`);
+});
+const byEl = new Map();
+document.querySelectorAll('canvas[data-hunch]').forEach(cv => byEl.set(cv, new Hunch(cv, { size: +cv.dataset.size, state: cv.dataset.hunch })));
 const io = new IntersectionObserver(es => es.forEach(e => { const h = HUNCHES.find(h => h.cv === e.target); if (h) h.visible = e.isIntersecting; }));
 HUNCHES.forEach(h => io.observe(h.cv));
 
 // ---------- hero mood picker ----------
-const moodsEl = document.getElementById('moods'), stage = document.getElementById('stage');
-const POOLS = { idle: '#FF9F1C33', listening: '#FF6A3D33', thinking: '#1F9D5526', found: '#FF6A3D33', deal: '#E9A80040', trust: '#1A16111a', track: '#2F7CF033', care: '#8B7CF233', sleepy: '#3D3A8C33' };
+const moodsEl = document.getElementById('moods');
 let auto = !REDUCE, autoIdx = 0;
-function pick(s, fromUser) {
+const order = Object.keys(MOODS);
+function pick(s, user) {
+  if (user) auto = false;
   hero.set(s);
-  if (fromUser) auto = false;
   moodsEl.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.s === s));
   document.getElementById('mood-name').textContent = MOODS[s].label;
   document.getElementById('mood-note').textContent = MOODS[s].note;
-  stage.querySelector('.pool').style.setProperty('--pool', POOLS[s]);
 }
-Object.entries(MOODS).forEach(([k, m]) => {
+order.forEach(k => {
   const b = document.createElement('button');
-  b.className = 'mood'; b.dataset.s = k; b.style.setProperty('--c', m.cols[1]);
-  b.innerHTML = `<i></i>${m.label}`; b.onclick = () => pick(k, true);
+  b.className = 'mood'; b.dataset.s = k; b.textContent = MOODS[k].label; b.onclick = () => pick(k, true);
   moodsEl.appendChild(b);
 });
 pick('idle');
-const order = ['idle', 'listening', 'thinking', 'found', 'deal', 'track', 'care', 'trust', 'sleepy'];
-setInterval(() => { if (auto) { autoIdx = (autoIdx + 1) % order.length; pick(order[autoIdx]); } }, 3400);
-document.getElementById('hero').addEventListener('pointerdown', () => { auto = false; hero.set('found'); pick('found', true); });
-
-// ---------- tracking rider ----------
-const rider = byEl.get(document.getElementById('rider'));
-const path = document.getElementById('route-path'), route = document.getElementById('route');
-const plen = path.getTotalLength();
-function placeRider(now) {
-  const p = REDUCE ? .55 : .12 + .74 * (.5 - .5 * Math.cos(now / 9000 * TAU));
-  const pt = path.getPointAtLength(p * plen);
-  const sxr = route.clientWidth / 268, syr = route.clientHeight / 170;
-  rider.cv.style.transform = `translate(${pt.x * sxr - rider.size / 2}px, ${pt.y * syr - rider.size / 2 - 8}px)`;
-  document.getElementById('eta').textContent = Math.max(1, Math.round((1 - p) * 14));
-}
+setInterval(() => { if (auto) { autoIdx = (autoIdx + 1) % order.length; pick(order[autoIdx]); } }, 3200);
+hero.cv.addEventListener('pointerdown', () => pick('found', true));
 
 // ---------- motion demo ----------
 const dh = byEl.get(document.getElementById('demo-hunch'));
-const dChips = document.getElementById('demo-chips'), dOut = document.getElementById('demo-out'), dGo = document.getElementById('demo-go');
+const dIsland = document.getElementById('demo-island'), dChips = document.getElementById('demo-chips'), dOut = document.getElementById('demo-out'), dGo = document.getElementById('demo-go');
 let busy = false;
+function islandText(html) {
+  dIsland.querySelector('span')?.remove();
+  if (html) { dIsland.classList.add('open'); dIsland.insertAdjacentHTML('beforeend', html); } else dIsland.classList.remove('open');
+}
 dGo.onclick = () => {
   if (busy) return; busy = true;
-  dChips.innerHTML = ''; dOut.innerHTML = ''; dh.set('thinking');
-  const chips = [['#2F7CF0', '22°C, drizzling'], ['#FF9F1C', 'Cosy → warm, creamy'], ['#1F9D55', 'Under ₹250'], ['#8B7CF2', 'You rated Punjabi Angithi 5★']];
-  chips.forEach(([c, txt], i) => setTimeout(() => {
-    const s = document.createElement('span'); s.className = 'chip emerge'; s.innerHTML = `<i style="--c:${c}"></i>${txt}`; dChips.appendChild(s);
-  }, 260 + i * 330));
+  dChips.innerHTML = ''; dOut.innerHTML = '';
+  dh.set('listening'); islandText('<span class="muted">Sun raha hoon…</span>');
   setTimeout(() => {
-    dh.set('found');
-    dOut.innerHTML = `<div class="pick emerge"><canvas class="plate" data-plate="dal" data-size="150" style="filter:drop-shadow(0 18px 20px rgba(122,59,34,.35))"></canvas>
-      <div class="row" style="justify-content:center"><span class="vm" style="--c:#1F9D55"></span><span class="dish">Dal Makhani + 2 Butter Naan</span></div>
-      <span class="meta">₹238 · 28 min · Punjabi Angithi · 4.5★</span>
-      <span class="chip" style="margin-top:4px;background:#FFF3CF"><i style="--c:#E9A800"></i>Free delivery tonight · saves ₹35</span></div>`;
-    const cv = dOut.querySelector('canvas'); drawPlate(cv, 'dal', 150);
-    dGo.textContent = 'Ask again';
-    busy = false;
-  }, 260 + chips.length * 330 + 500);
+    dh.set('thinking'); islandText('<span class="shim">Checking 14 kitchens near you</span>');
+    const chips = ['22°C and drizzling', 'Cosy → warm and creamy', 'Under ₹250', 'You rated Punjabi Angithi 5★'];
+    chips.forEach((txt, i) => setTimeout(() => dChips.insertAdjacentHTML('beforeend', `<span class="chip thought emerge"><svg class="ico"><use href="#i-sparkle"/></svg>${txt}</span>`), 200 + i * 320));
+    setTimeout(() => {
+      dh.set('found'); islandText('<span>Found it</span>');
+      dOut.innerHTML = `<div class="pick emerge"><canvas class="plate" data-size="150"></canvas>
+        <span class="tag"><svg class="ico"><use href="#i-sparkle"/></svg>Hunch pick</span>
+        <h3>Dal Makhani + 2 Naan</h3><span class="meta">Punjabi Angithi · ₹238 · 28 min</span>
+        <button class="btn lg primary" style="width:100%">Order · <span class="mono">₹238</span></button></div>`;
+      drawPlate(dOut.querySelector('canvas'), 'dal', 150);
+      dGo.textContent = 'Ask again'; dGo.className = 'btn lg secondary';
+      busy = false;
+    }, 200 + chips.length * 320 + 600);
+  }, 1100);
 };
 
 // ---------- loop ----------
+const ring = document.getElementById('undo-ring');
 let last = performance.now();
 function loop(now) {
   const dt = Math.min(.05, (now - last) / 1000); last = now;
   for (const h of HUNCHES) if (h.visible) { h.step(dt, now); h.draw(now); }
-  placeRider(now);
+  if (!REDUCE) {
+    bars.forEach((b, i) => b.style.height = (6 + 20 * Math.abs(Math.sin(now / 180 + i * .7) * Math.sin(now / 470 + i * .3))) + 'px');
+    ring.style.strokeDashoffset = (50.3 * ((now / 5000) % 1)).toFixed(2);
+  }
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
