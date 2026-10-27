@@ -22,30 +22,33 @@ export function TopBar({ mood, status, working, initial, onProfile }: TopBarProp
         type="button"
         onClick={onProfile}
         aria-label="Profile and settings"
-        className="mt-3 grid size-9 place-items-center rounded-full bg-white text-label font-semibold text-graphite-700 shadow-e1 transition-colors hover:bg-graphite-50"
+        className="mt-[14px] grid size-9 place-items-center rounded-full bg-white text-label font-semibold text-graphite-700 shadow-e1 transition-colors hover:bg-graphite-50"
       >
         {initial}
       </button>
       <div className="flex flex-col items-center">
         <Hunch mood={mood} size={64} look={[0, 0.45]} />
-        <span className="frost -mt-3 rounded-full px-3.5 py-1 text-[13px] font-semibold shadow-e2">Hunch</span>
-        <div className="h-5 pt-1">
-          <AnimatePresence mode="wait" initial={false}>
+        {/* Status lives inside the name pill (like a contact's subtitle), so it never collides with the thread. */}
+        <motion.div layout transition={{ duration: dur.base }} className="frost -mt-3 flex flex-col items-center rounded-[16px] px-3.5 py-1 shadow-e2" style={{ borderRadius: 16 }}>
+          <motion.span layout="position" className="text-[13px] font-semibold leading-[18px]">
+            Hunch
+          </motion.span>
+          <AnimatePresence mode="popLayout" initial={false}>
             {status && (
               <motion.span
                 key={status}
-                initial={{ opacity: 0, y: -4 }}
+                initial={{ opacity: 0, y: -3 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 4 }}
+                exit={{ opacity: 0, y: 3 }}
                 transition={{ duration: dur.base }}
-                className={cn('block text-caption font-normal text-graphite-500', working && 'text-shimmer')}
+                className={cn('whitespace-nowrap text-[12px] leading-4 text-graphite-500', working && 'text-shimmer')}
                 role="status"
               >
                 {status}
               </motion.span>
             )}
           </AnimatePresence>
-        </div>
+        </motion.div>
       </div>
       <span />
     </div>

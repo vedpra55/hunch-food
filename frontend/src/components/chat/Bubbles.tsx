@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import { emerge } from '../../design/motion'
 import { cn } from '../../lib/cn'
 
-/** Hunch speaks: white bubble on the left. */
+/** A short Hunch acknowledgement: the same white card, sized to the text. */
 export function HunchSays({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <motion.p
@@ -11,7 +11,7 @@ export function HunchSays({ children, className }: { children: ReactNode; classN
       animate="shown"
       variants={emerge}
       style={{ transformOrigin: '0% 0%' }}
-      className={cn('max-w-[86%] self-start rounded-[20px_20px_20px_6px] bg-white px-4 py-2.5 text-[15px] leading-[22px] text-graphite-900 shadow-e1', className)}
+      className={cn('max-w-[86%] self-start rounded-[20px] bg-white px-4 py-3 text-[15px] leading-[22px] text-graphite-900 shadow-e1', className)}
     >
       {children}
     </motion.p>
@@ -35,7 +35,7 @@ export function UserSays({ children }: { children: ReactNode }) {
 /** Hunch is typing. */
 export function Typing() {
   return (
-    <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex h-10 w-16 items-center justify-center gap-1 self-start rounded-[20px_20px_20px_6px] bg-white shadow-e1" aria-label="Hunch is typing">
+    <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex h-10 w-16 items-center justify-center gap-1 self-start rounded-[20px] bg-white shadow-e1" aria-label="Hunch is typing">
       {[0, 1, 2].map(i => (
         <motion.i
           key={i}

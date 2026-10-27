@@ -33,7 +33,15 @@ describe('every scenario keeps the spec', () => {
       for (const x of all(m)) expect(x.reasons.length).toBeLessThanOrEqual(3)
       for (const g of m.groups) for (const x of g.items) expect(x.open).toBe(true)
     })
-    it(`${s.id}: 3 starters`, () => expect(m.starters).toHaveLength(3))
+    it(`${s.id}: 3 prompts, a context row of ≤ 3 items, and a pick unless tracking`, () => {
+      expect(m.prompts).toHaveLength(3)
+      expect(m.context.length).toBeGreaterThan(0)
+      expect(m.context.length).toBeLessThanOrEqual(3)
+      if (!m.tracking) expect(m.pick).toBeDefined()
+    })
+    it(`${s.id}: tags are only Usual or an offer`, () => {
+      for (const x of all(m)) if (x.tag) expect(x.tag).toMatch(/^(Usual|₹\d+ off)$/)
+    })
     it(`${s.id}: never more than 2 dishes from one kitchen per row`, () => {
       for (const g of m.groups) {
         const counts = new Map<string, number>()
@@ -154,15 +162,28 @@ describe('goals and context shape the screen', () => {
     if (m.usual) expect(m.usual.open).toBe(true)
   })
 
-  it('first visit: no usual, one popular group', () => {
+  it('veg day and fasting say so once, in the context row', () => {
+    const v = home('veg-day')
+    expect(v.context.find(c => c.rule === 'vegDay')?.icon).toBe('leaf')
+    for (const x of all(v)) expect(x.reasons.join(' ')).not.toMatch(/veg/i)
+    const n = home('navratri')
+    expect(n.context.find(c => c.rule === 'fasting')?.text).toBe('Navratri · day 3')
+    expect(n.prompts.map(p => p.text)).toContain('Vrat thali')
+    expect(n.pick?.dish.traits).not.toContain('drink')
+  })
+
+  it('first visit: no usual, a best-fit pick, one popular group', () => {
     const m = home('first')
     expect(m.usual).toBeUndefined()
+    expect(m.pick).toBe(m.groups[0].items[0])
     expect(m.groups.map(g => g.title)).toEqual(['Popular near you'])
   })
 
   it('order on its way replaces everything', () => {
     const m = home('tracking')
-    expect(m.line).toBe('12 min away. Arjun has it.')
+    expect(m.line).toBe("On its way from Nawab's Kitchen.")
+    // the ETA is said once, in the tracking block
+    expect([m.line, ...m.context.map(c => c.text)].join(' ')).not.toMatch(/12 min/)
     expect(m.groups).toHaveLength(0)
     expect(m.tracking?.dish).toBe(DISH_BY_ID['chicken-biryani'])
   })
@@ -170,6 +191,7 @@ describe('goals and context shape the screen', () => {
   it('the usual carries its tag, customisation and reason', () => {
     const m = home('breakfast')
     expect(m.usual?.tag).toBe('Usual')
-    expect(m.usual?.reasons[0]).toMatch(/^Your usual · ordered \d+ times$/)
+    expect(m.usual?.reasons[0]).toMatch(/^you've had it \d+ times$/)
+    expect(m.pick).toBe(m.usual)
   })
 })

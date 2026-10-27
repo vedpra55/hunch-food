@@ -164,7 +164,7 @@ export interface Suggestion {
   score: number
   /** One tag max: Usual › ₹X off › goal metric */
   tag?: string
-  /** Up to 3, strongest first. Shown in the sheet. */
+  /** Up to 3 lowercase phrases, strongest first, written to read inside a sentence. */
   reasons: string[]
   open: boolean
   /** "Opens 7 pm" when closed */
@@ -198,13 +198,37 @@ export interface Tracking {
   rider: string
 }
 
+/** Icons carry one meaning each (HOME_SPEC icon map). The UI maps keys to Phosphor icons. */
+export type IconKey =
+  | 'sun' | 'moon' | 'rain' | 'hot' | 'cold' | 'clock' | 'pin'
+  | 'leaf' | 'lotus' | 'target' | 'barbell' | 'fire' | 'bowl'
+  | 'coffee' | 'egg' | 'cake' | 'cookie' | 'shuffle' | 'moped' | 'tag' | 'chat'
+
+/** One piece of the Today card's context row, e.g. CloudRain "Light rain". */
+export interface ContextItem {
+  icon: IconKey
+  text: string
+  /** A situational rule the user can switch off for today */
+  rule?: RuleId
+}
+
+/** Something the user can say with one tap. */
+export interface Prompt {
+  icon: IconKey
+  text: string
+}
+
 export interface HomeModel {
   stage: Stage
+  context: ContextItem[]
   line: string
   rules: RuleChip[]
   ask?: Ask
+  /** The one suggestion on the Today card: the usual when it fits, otherwise the best fit. */
+  pick?: Suggestion
   usual?: Suggestion
+  /** Ranked rows behind the scenes; they choose the pick and feed replies. Not shown on Home. */
   groups: Group[]
-  starters: string[]
+  prompts: Prompt[]
   tracking?: Tracking
 }

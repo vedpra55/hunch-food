@@ -1,11 +1,12 @@
-import type { Stage } from './types'
+import type { IconKey, Prompt } from './types'
 
 /**
  * Every sentence Hunch says on Home. One file so wording is reviewed in one place.
  * Rules (HOME_SPEC §5): ≤ 12 words, reason first, name the restaurant, exact numbers, no emoji.
  */
 export const LINES = {
-  tracking: (eta: number, rider: string) => `${eta} min away. ${rider} has it.`,
+  // The live ETA is shown big in the tracking block; the line doesn't repeat it.
+  tracking: (restaurant: string) => `On its way from ${restaurant}.`,
   fasting: (name: string, day: number) => `${name}, day ${day}. All fasting-friendly today.`,
   vegDay: (dayName: string) => `${dayName}, so all veg today.`,
   first: () => `Tell me what you're craving. I'll handle the rest.`,
@@ -28,38 +29,54 @@ export const ASKS = {
   }),
 }
 
-export const STARTERS: Record<Stage, string[]> = {
-  first: ['Spicy, under ₹250', 'Healthy lunch', 'Best biryani near me'],
-  breakfast: ['Something filling', 'Just coffee', 'Surprise me'],
-  lunch: ['Same as last time', 'Under ₹200', 'Something new'],
-  snack: ['Something sweet', 'Chai', 'Surprise me'],
-  dinner: ['Something lighter', 'High protein', 'Surprise me'],
-  late: ['Light snack', 'Dessert', 'Chai'],
-  tracking: ["Where's my rider?", 'Add a drink', 'Report an issue'],
+const p = (icon: IconKey, text: string): Prompt => ({ icon, text })
+const SURPRISE = p('shuffle', 'Surprise me')
+
+/** One-tap prompts on the Today card, three per moment. */
+export const PROMPTS = {
+  first: [p('fire', 'Spicy, under ₹250'), p('leaf', 'Something healthy'), p('bowl', 'Best biryani nearby')],
+  fasting: [p('bowl', 'Vrat thali'), p('cake', 'Something sweet'), p('leaf', 'Fruit, no sugar')],
+  vegDay: [p('leaf', 'Paneer, not too heavy'), p('bowl', 'South Indian'), SURPRISE],
+  hot: [p('cold', 'Something cool'), p('leaf', 'Something light'), SURPRISE],
+  warm: [p('rain', 'Something warm'), p('barbell', 'High protein, under ₹300'), SURPRISE],
+  warmLight: [p('rain', 'Something warm and light'), p('barbell', 'High protein, under ₹300'), SURPRISE],
+  breakfast: [p('coffee', 'Just coffee'), p('egg', 'Something filling'), SURPRISE],
+  lunch: [p('bowl', 'Same as last time'), p('tag', 'Under ₹200'), SURPRISE],
+  snack: [p('cake', 'Something sweet'), p('coffee', 'Chai'), SURPRISE],
+  dinner: [p('leaf', 'Something lighter'), p('barbell', 'High protein, under ₹300'), SURPRISE],
+  late: [p('cookie', 'Light snack'), p('cake', 'Dessert'), p('coffee', 'Chai')],
+  tracking: [p('moped', "Where's my rider?"), p('coffee', 'Add a drink'), p('chat', 'Report an issue')],
+} satisfies Record<string, Prompt[]>
+
+/** Refine a reply with one tap. */
+export const REFINE = {
+  veg: p('leaf', 'Only veg'),
+  budget: (b: number) => p('tag', `Under ${money(b)}`),
+  quick: p('clock', 'Here in 20 min'),
 }
 
-/** When a rule shapes the day, the starters follow it. */
-export const RULE_STARTERS = {
-  fasting: ['Vrat thali', 'Something sweet', 'Fruit, no sugar'],
-  vegDay: ['Paneer, not too heavy', 'South Indian', 'Surprise me'],
-}
-
-/** Sheet reasons, strongest first. Pick ≤ 3. */
+/** Reasons, strongest first. Lowercase phrases so they read inside a sentence. */
 export const REASONS = {
-  usual: (times: number) => `Your usual · ordered ${times} times`,
-  favourite: () => 'Your favourite place',
-  vegDay: () => 'Veg day',
-  fasting: () => 'Fasting-friendly',
-  cutting: () => 'Fits your cutting goal',
+  usual: (times: number) => `you've had it ${times} times`,
+  favourite: () => 'a favourite of yours',
+  fasting: () => 'fasting-friendly',
+  cutting: () => 'fits your cutting goal',
   protein: (g: number) => `${g} g protein`,
-  light: () => 'Light, as you wanted',
-  budget: (b: number) => `Under your ₹${b} budget`,
-  rain: () => 'Raining → warm food',
-  hot: (t: number) => `${t}° → something cool`,
-  offer: (off: number) => `₹${off} off today`,
-  fast: (eta: number) => `Arrives in ${eta} min`,
-  rating: (r: number, count: number) => `${r}★ from ${count >= 1000 ? `${(count / 1000).toFixed(1)}k` : count} ratings`,
+  kcal: (k: number) => `${k} kcal`,
+  light: () => 'light, as you wanted',
+  budget: (b: number) => `under your ${money(b)} budget`,
+  rain: () => 'warm for the rain',
+  hot: () => 'cool for the heat',
+  offer: (off: number) => `${money(off)} off today`,
+  fast: (eta: number) => `here in ${eta} min`,
+  rating: (r: number, count: number) => `rated ${r}★ by ${count >= 1000 ? `${(count / 1000).toFixed(1)}k` : count} people`,
 }
+
+export const capital = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s)
+/** ["a", "b", "c"] → "a, b and c" */
+export const joinAnd = (parts: string[]) => (parts.length < 2 ? (parts[0] ?? '') : `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}`)
+/** Reasons as one sentence for the sheet: "Warm for the rain, fits your cutting goal and rated 4.6★." */
+export const reasonSentence = (parts: string[]) => (parts.length ? `${capital(joinAnd(parts))}.` : '')
 
 export const GROUP_TITLES = {
   usuals: 'Your usuals',
@@ -79,16 +96,20 @@ export const GROUP_TITLES = {
 export const wordCount = (s: string) => s.trim().split(/\s+/).length
 
 /** ₹1,121 — Indian grouping, no decimals */
-export const money = (n: number) => `₹${Math.round(n).toLocaleString('en-IN')}`
+export function money(n: number) {
+  return `₹${Math.round(n).toLocaleString('en-IN')}`
+}
 
 /** Conversation replies. Same rules: ≤ 14 words, name the restaurant, exact numbers. */
 export const CHAT = {
   results: {
-    budget: (n: number, b: number, place: string) => `${n} good options under ${money(b)}. ${place} is my pick.`,
-    protein: (n: number, dish: string, g: number) => `${n} high-protein picks. ${dish} has ${g} g.`,
-    light: (n: number, place: string) => `${n} light options. ${place} is my pick.`,
-    usual: (place: string) => `Your usual from ${place}? Or one of these.`,
-    generic: (n: number, place: string) => `Found ${n}. ${place} is my pick.`,
+    /** Lead with the pick and why, never a count. */
+    pick: (dish: string, place: string, why: string[]) => {
+      if (!why.length) return `${dish} from ${place} is my pick.`
+      // A second reason only when it reads naturally with "too".
+      const too = why[1] && /^(fasting-friendly|fits your|warm for|cool for|light|under your)/.test(why[1]) ? ` ${capital(why[1])} too.` : ''
+      return `${dish} from ${place}, ${why[0]}.${too}`
+    },
     none: (budget?: number) => (budget ? `Nothing open under ${money(budget)}. Try a little more?` : `Nothing open fits that right now. Try something close?`),
   },
   plan: {
@@ -106,14 +127,16 @@ export const CHAT = {
     title: (place: string) => `Placing your order at ${place}`,
     titleMany: (n: number) => `Placing your order from ${n} kitchens`,
   },
-  placed: (place: string, eta: number) => `Done. ${place} is cooking. Here in ${eta} min.`,
-  placedMany: (n: number, eta: number) => `Done. ${n === 2 ? 'Both kitchens are' : `All ${n} kitchens are`} cooking. Here in ${eta} min.`,
+  // The tracking block right below shows who's cooking and when it arrives; don't repeat it.
+  placed: () => `Done. I'll tell you when it's close.`,
+  placedMany: (n: number) => `Done. ${n === 2 ? 'Both kitchens have' : `All ${n} kitchens have`} it. I'll tell you when it's close.`,
   notNow: () => `No problem. It's in your cart when you're ready.`,
   ask: {
     remembered: (day: string) => `Got it. ${day}s are veg from now on.`,
     declined: () => `Okay. I won't ask again.`,
   },
   ruleOff: (label: string) => `${label} off for today.`,
+  ruleOn: (label: string) => `${label} back on.`,
   notForMe: {
     'too-spicy': () => `Noted. Milder picks from now on.`,
     'too-pricey': () => `Noted. I'll keep it cheaper.`,

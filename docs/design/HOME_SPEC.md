@@ -25,58 +25,103 @@ Three rules:
 
 ---
 
-## 2. Home, top to bottom
+## 2. Home: the conversation
 
-| # | Block | Content | Notes |
-|---|---|---|---|
-| 1 | Top bar | Left: profile & settings (avatar, 36 px). Centre: Hunch + **"Hunch"** name pill; status line under it only while working. Right: empty. | |
-| 2 | Hunch's line | One sentence: why these, why now. | ≤ 12 words |
-| 3 | Active rules | Small chips for *situational* rules only: `Veg day ×` `Cutting ×` `Navratri ×`. | Permanent diet is never shown here; it lives in Profile. |
-| 4 | Ask (rare) | One confirmation card when Hunch noticed a pattern. | Max one at a time. |
-| 5 | Your usual | One white dish card with the only button on Home: **Order again · ₹289**. | Hidden on first visit or if the usual breaks a rule today. A drink is never the usual; it goes with the meal. |
-| 6 | Groups | **One or two** horizontal rows of white dish cards. | Never three. |
-| 7 | Cart pill | `2 items · ₹538 · View`, above the message bar. | Only when the cart has items. |
-| 8 | Message bar | Mic first; starter chips above it when the thread is empty. | 3 starters |
+Home is a conversation. It opens with **one Today card**; every reply after it is **one card**.
 
-### Groups (horizontal rows)
-- Title in the user's words, ≤ 3 words, with a reason: **Your usuals · Warm and comforting · Warm and light · High protein · Under ₹250 · Here in 20 min · Open late · Fasting-friendly · Light and fresh · Popular near you**.
-- Never "Recommended" or "Top picks".
-- 3–6 cards per row, ranked best first. The next card peeks in at the edge.
-- A dish appears once on the screen (no repeats across usual and groups).
-- **Variety:** at most 2 dishes from one kitchen per row.
-- **Meal rows stay meals:** desserts and drinks never mix into Warm, Protein, Budget, Veg or Popular rows. They get their own rows (Something sweet, Light and fresh, Here in 20 min).
-- **Cutting + High protein means lean:** ≤ 600 kcal.
-- **In the heat,** Light and fresh shows nothing hot.
-- **Never empty:** *Popular near you* is the fallback row, ranked by the person's own taste (strangers get crowd favourites). A fasting day may show 1–2 items rather than nothing.
-- Desktop: same compact column; scroll arrows on hover.
+### Three rules
+1. **One Hunch turn = one white card.** The message and everything it refers to live inside it. Hunch never speaks in a bare bubble next to loose cards.
+2. **Pills are only for things you tap.** Reasons, reviews and status are plain text.
+3. **An icon means one thing and appears once.** See the icon map below.
 
-### Dish card (white on `#FAFAFA`, 200 px wide)
+### Top bar
+Left: profile & settings (avatar, 36 px), vertically centred on Hunch. Centre: Hunch + **"Hunch"** name pill; a status line appears under it only while Hunch works (it takes no space otherwise). Right: empty.
+
+### Today card (the empty state)
 ```
-┌─────────────────────┐
-│ [photo 4:3]   Usual │  one tag max
-├─────────────────────┤
-│ ▣ Chicken Dum Biryani│  will I like it?
-│ Nawab's Kitchen 4.6★│  is the place good?
-│ ₹289 · 32 min       │  cost · time
-└─────────────────────┘
+┌────────────────────────────────┐
+│ ☁ 7:40 pm · Light rain · Cutting ›│  context row: icon + words, one line; tap → Today sheet
+│                                  │
+│ Raining. Something warm,         │  Hunch's line, 22 px
+│ still light?                     │
+│                                  │
+│ [img] Chicken Dum Biryani        │  the one suggestion
+│       Nawab's Kitchen · ₹289     │
+│ [ Order again · ₹289 ]           │
+│                                  │
+│ Or ask me                        │
+│ (☁) Something warm and light   › │  3 prompts: stage icon + words, tap to send
+│ (⚖) High protein, under ₹300   › │
+│ (⇄) Surprise me                › │
+│ ─────────────────────────────    │
+│ You skip non-veg on Thursdays…   │  ask, only when relevant
+│ [Remember] [Not really]          │
+└──────────────────────────────────┘
 ```
-- White, soft shadow (`e1`), 20 px corners, no border, no button (except *Your usual*).
-- **Tag priority (pick one):** `Usual` › `₹54 off` › goal metric (`32 g protein` for protein goals, `380 kcal` when cutting) › none.
-- **Closed restaurant:** card fades, last line becomes `Opens 7 pm`. Only *Your usual* can show closed; groups show open places only.
-- Tap anywhere → sheet.
+- **The one suggestion:** your usual when it fits the moment; otherwise Hunch's best fit. The only button on Home: **Order again · ₹289** (usual) or **Order · ₹249** (best fit). Tap the row → sheet.
+- **Context row** shows time, notable weather and today's situational rules. Rules no longer appear as × chips; tapping the row opens the **Today sheet** with an on/off switch per rule (resets at midnight).
+- The card sits in the vertical middle of the screen until the conversation starts.
+- Order on its way: the suggestion is replaced by the tracking block.
+
+### Reply card
+```
+┌────────────────────────────────┐
+│ Chicken Tikka from Tandoor       │  the pick + why, ≤ 16 words
+│ Street, 42 g protein. Fits your  │
+│ cutting goal too.                │
+│ ┌────┐ ┌────┐ ┌────┐ ┌──         │  tiles scroll inside the card
+│ ✦ Chicken  Paneer   Chicken      │  ✦ marks the pick, first tile only
+│ Tikka      Tikka    Momos        │  name wraps to 2 lines
+│ Tandoor…   Tandoor… Midnight…    │
+│ ₹299 · 26m ₹249 · 26m ₹169 · 25m │
+│ (Only veg) (Here in 20 min)      │  ≤ 2 refine actions (pills: they are actions)
+└──────────────────────────────────┘
+```
+- **Copy:** lead with the pick and the reason, never a count. ✗ "Found 3. Brew Lab is my pick." ✓ "Cold Coffee from Brew Lab, you've had it 3 times."
+- Plans, checkout and tracking use the same card shape. The order confirmation lives inside the tracking card.
+- Small acknowledgements ("Noted. I'll skip Nawab's Kitchen.") are the same card, sized to the text.
+
+### Tile (dish inside a card, 132 px)
+- Square photo, 14 px corners; name up to 2 lines; restaurant; `₹299 · 26 min`.
+- **Numbers use Geist with tabular figures.** No monospace anywhere in the product UI.
+- **Tag (max one):** `Usual` › `₹50 off`. Never kcal or protein unless the user asked for it.
+- Closed restaurant: fades, last line `Opens 7 pm`.
+- Veg mark 11 px, aligned with the first line of the name.
 
 ### Sheet (sections appear only when relevant)
 1. Photo
 2. Dish name + veg mark
 3. Restaurant: **name · area · 1.8 km · 4.6★ (2.1k) · Open till 11:30 pm**
 4. `₹289 · 32 min · Free delivery`
-5. **Why Hunch picked this** — up to 3 reasons
-6. **What people say** — 3 short phrases
+5. **Why Hunch picked it** — one plain sentence, no icons: "You've had it 6 times, your favourite place and warm for the rain."
+6. **What people say** — three short quotes as plain lines
 7. **Your usual** — customisations already applied, one tap to change
 8. Offer (if any)
 9. Nutrition (only with a fitness goal): kcal · protein
 10. Sticky footer: quantity stepper + **Add · ₹289**
 11. Quiet link: **Not for me** → *Too spicy · Too pricey · Not this place · Not today*
+
+Section labels in sentence case. Pills only for real choices (spice, add-ons, Not-for-me reasons).
+
+### Icon map (Phosphor, line weight)
+| Icon | Means | Where |
+|---|---|---|
+| Sparkle | Hunch's pick | Once per reply card |
+| Sun / Moon | Time of day | Context row, prompts |
+| CloudRain / ThermometerHot / Snowflake | Weather | Context row, prompts |
+| Leaf | Veg / light | Veg day, healthy prompts |
+| FlowerLotus | Fasting | Navratri |
+| Target | Cutting goal | Context row |
+| Barbell | Protein | Prompts |
+| Fire | Spicy | Prompts |
+| BowlFood | A specific dish | Prompts |
+| Coffee / Cake / Cookie | Drinks / dessert / snack | Prompts |
+| Shuffle | Surprise me | Prompts |
+| Moped | Delivery | Tracking |
+| Tag | Offer / budget | Sheet, prompts |
+
+### Cart pill
+`2 items · ₹538 · View`, above the message bar, only when the cart has items.
 
 ---
 
@@ -103,10 +148,10 @@ Three rules:
 | Place | Shows | Example |
 |---|---|---|
 | Hunch's line | The single strongest reason | "Thursday, so all veg today." |
-| Active rules | Situational rules, tap × to switch off **for today** | `Veg day ×` |
+| Context row | Situational rules; tap to switch off **for today** in the Today sheet | `Leaf Veg day · Target Cutting` |
 | Group title | The blended reason | "Warm and light" |
-| Card tag | One useful fact | "Usual", "32 g protein" |
-| Sheet | ≤ 3 reasons + nutrition if a goal is set | "Raining · Fits your cutting goal · 4.6★ here" |
+| Tile tag | One decisive fact | "Usual", "₹50 off" |
+| Sheet | One sentence of ≤ 3 reasons + nutrition if a goal is set | "Warm for the rain, fits your cutting goal and rated 4.6★." |
 
 ### How Hunch learns
 1. **Onboarding:** 3 taps — Diet · Goals (optional) · Allergies.
@@ -131,19 +176,22 @@ Trust rules: today-only overrides reset at midnight · every item shows its sour
 
 ## 4. Stages
 
-| Stage | When | Line | Usual | Groups | Starters |
-|---|---|---|---|---|---|
-| First visit | No orders yet | "Tell me what you're craving. I'll handle the rest." | — | Popular near you | Spicy, under ₹250 · Healthy lunch · Best biryani near me |
-| Breakfast | 6–11 | "Breakfast? Your usual is 15 min away." | ✓ | Here in 20 min | Something filling · Just coffee · Surprise me |
-| Lunch | 11–16 | "Lunch in 25 min?" | ✓ | Under ₹250 · Here in 20 min | Same as last time · Under ₹200 · Something new |
-| Snack | 16–19 | "Snack time?" | ✓ | Light and fresh | Something sweet · Chai · Surprise me |
-| Dinner | 19–23 | "Dinner? Your usual from Nawab's Kitchen?" | ✓ | context-driven | Something lighter · High protein · Surprise me |
-| Late night | 23–6 | "Still up? These are open late." | if open | Open late · Something sweet | Light snack · Dessert · Chai |
-| Order on its way | Active order | "12 min away. Arjun has it." | — | — (tracking card only) | Where's my rider? · Add a drink · Report an issue |
+| Stage | Context row | Line | Suggestion | Prompts |
+|---|---|---|---|---|
+| First visit | Clock · Indiranagar | "Tell me what you're craving. I'll handle the rest." | Best fit | Fire Spicy, under ₹250 · Leaf Something healthy · BowlFood Best biryani nearby |
+| Breakfast | Sun · 8:40 am | "Breakfast? Your usual is 15 min away." | Usual | Coffee Just coffee · Egg Something filling · Shuffle Surprise me |
+| Lunch | Sun · 1:20 pm | "Lunch in 22 min?" | Usual | BowlFood Same as last time · Tag Under ₹200 · Shuffle Surprise me |
+| Snack | Sun | "Snack time?" | Usual or best fit | Cake Something sweet · Coffee Chai · Shuffle Surprise me |
+| Dinner | Moon · rain · goal | "Raining. Something warm, still light?" | Usual | CloudRain Something warm and light · Barbell High protein, under ₹300 · Shuffle Surprise me |
+| Hot day | ThermometerHot · 35° | "35° outside. Something cool?" | Usual | Snowflake Something cool · … |
+| Veg day | Leaf Veg day | "Thursday, so all veg today." | Veg usual | Leaf Paneer, not too heavy · BowlFood South Indian · Shuffle Surprise me |
+| Fasting | FlowerLotus Navratri · day 3 | "Navratri, day 3. All fasting-friendly today." | Best fit | BowlFood Vrat thali · Cake Something sweet · Leaf Fruit, no sugar |
+| Late night | Moon · 12:40 am | "Still up? These are open late." | Best open fit | Cookie Light snack · Cake Dessert · Coffee Chai |
+| Order on its way | Moon · 8:40 pm | "On its way from Nawab's Kitchen." | Tracking block (the ETA appears here, once) | Moped Where's my rider? · Coffee Add a drink · ChatCircle Report an issue |
 
 Line priority (first that applies wins): **order on its way › fasting › veg day › first visit › weather (blended with goal) › meal slot**.
 
-When a rule shapes the day, starters follow it — fasting: *Vrat thali · Something sweet · Fruit, no sugar*; veg day: *Paneer, not too heavy · South Indian · Surprise me*.
+Behind the suggestion, Hunch still ranks the rows described in earlier versions (Warm and light, High protein, Popular near you…). They choose the best fit and feed replies; they are no longer shown as rows on Home.
 
 ---
 
@@ -152,7 +200,7 @@ When a rule shapes the day, starters follow it — fasting: *Vrat thali · Somet
 ### Rules
 - Hunch's line ≤ 12 words, reason first. Status lines: verb + "…".
 - Always name the restaurant. Never "a place nearby".
-- Numbers: `₹289` · `32 min` · `4.6★` · `1.8 km` · `380 kcal` · `32 g protein`. Never "approx", never "mins".
+- Numbers: `₹289` · `32 min` · `4.6★` · `1.8 km` · `380 kcal` · `32 g protein`, in Geist tabular figures. Never "approx", never "mins".
 - Buttons: verb + amount. Hinglish only after the user uses it. No emoji.
 
 ### Lines
@@ -170,8 +218,10 @@ When a rule shapes the day, starters follow it — fasting: *Vrat thali · Somet
 ### Status lines
 `Finding dinner…` · `Checking 14 kitchens…` · `Comparing 3 places…` · `Checking offers…` · `Placing your order…`
 
-### Sheet reasons (pick ≤ 3, strongest first)
-`Your usual · ordered 6 times` · `Your favourite place` · `Fits your cutting goal` · `38 g protein` · `Veg day` · `Fasting-friendly` · `Raining → warm food` · `34° → something cool` · `Arrives in 18 min` · `₹54 off today` · `4.6★ from 2.1k ratings`
+### Reasons (≤ 3, strongest first; written as phrases so they read in a sentence)
+`you've had it 6 times` · `your favourite place` · `fasting-friendly` · `fits your cutting goal` · `42 g protein` · `light, as you wanted` · `under your ₹300 budget` · `warm for the rain` · `cool for the heat` · `₹54 off today` · `here in 18 min` · `rated 4.6★ by 2.1k people`
 
-### Buttons and chips
-`Order again · ₹289` · `Add · ₹289` · `Pay ₹335` · `Not now` · `Remember` · `Not really` · `Not for me`
+Reply: "{Dish} from {Restaurant}, {reason 1}. {Reason 2} too." Sheet: "{Reason 1}, {reason 2} and {reason 3}."
+
+### Buttons and actions
+`Order again · ₹289` · `Order · ₹249` · `Add · ₹289` · `Pay ₹335` · `Not now` · `Remember` · `Not really` · `Not for me` · refine: `Only veg` · `Under ₹200` · `Here in 20 min`

@@ -1,9 +1,9 @@
 import { DISH_BY_ID } from '../data/menu'
 import { RESTAURANT_BY_ID } from '../data/restaurants'
-import { CHAT } from './copy'
+import { CHAT, REASONS, REFINE, wordCount } from './copy'
 import { allowedSuggestions, has, isMain, MAX_PER_RESTAURANT, signals } from './recommend'
 import { isOpen } from './time'
-import type { Context, Dish, DishId, Restaurant, Suggestion, UserProfile } from './types'
+import type { Context, Dish, DishId, Prompt, Restaurant, Suggestion, UserProfile } from './types'
 
 /**
  * Turns a typed or spoken request into a reply. A stand-in for the AI agent:
@@ -23,6 +23,9 @@ export interface Intent {
   sweet?: boolean
   drink?: boolean
   quick?: boolean
+  filling?: boolean
+  /** Something new: skip what they usually order */
+  surprise?: boolean
   /** Dish or cuisine words, e.g. "biryani", "south indian" */
   terms: string[]
 }
@@ -51,6 +54,8 @@ const TERMS: Record<string, string[]> = {
   north: ['north indian'],
   punjabi: ['north indian', 'dal', 'chole', 'rajma'],
   breakfast: ['dosa', 'idli', 'omelette'],
+  fruit: ['fruit'],
+  sweet: ['gulab', 'rose milk', 'fruit'],
 }
 
 export function parse(text: string): Intent {
@@ -74,7 +79,9 @@ export function parse(text: string): Intent {
     spicy: /spicy|teekha/.test(t),
     sweet: /\b(sweet|dessert|mithai)/.test(t),
     drink: /\b(drink|coffee|chai|tea|lassi)/.test(t),
-    quick: /\b(quick|fast|asap|hurry|soon)/.test(t),
+    quick: /\b(quick|fast|asap|hurry|soon|20 min)/.test(t),
+    filling: /\b(filling|heavy|hungry|starving)/.test(t),
+    surprise: /surprise|something new|random/.test(t),
     terms,
   }
   return intent
@@ -89,6 +96,8 @@ const matchesTerms = (c: Suggestion, terms: string[]) => {
 export interface Results {
   text: string
   items: Suggestion[]
+  /** Up to 2 one-tap refinements, e.g. "Only veg", "Under ₹200" */
+  refine: Prompt[]
 }
 
 export function search(intent: Intent, user: UserProfile, ctx: Context): Results {
@@ -97,13 +106,15 @@ export function search(intent: Intent, user: UserProfile, ctx: Context): Results
 
   if (intent.kind === 'usual') {
     const items = all.filter(c => s.usuals.has(c.dish.id) && !has(c, 'drink')).sort((a, b) => b.score - a.score)
-    if (items.length) return { text: CHAT.results.usual(items[0].restaurant.name), items: diverse(items) }
+    if (items.length) return { ...reply(diverse(items), intent), refine: [] }
   }
 
   const wantsSweetOrDrink = intent.sweet || intent.drink || intent.terms.some(t => ['coffee', 'chai', 'tea'].includes(t))
   const items = all.filter(c => {
     const d = c.dish
-    if (!wantsSweetOrDrink && !isMain(c)) return false
+    // Naming a dish ("fruit", "chai") finds it even if it's a drink or a sweet.
+    if (!wantsSweetOrDrink && !intent.terms.length && !isMain(c)) return false
+    if (intent.surprise && s.usuals.has(d.id)) return false
     if (intent.budget && d.price > intent.budget) return false
     if (intent.veg && d.diet !== 'veg') return false
     if (intent.protein && d.proteinG < 20) return false
@@ -114,22 +125,35 @@ export function search(intent: Intent, user: UserProfile, ctx: Context): Results
     if (intent.sweet && !has(c, 'sweet')) return false
     if (intent.drink && !intent.sweet && !has(c, 'drink')) return false
     if (intent.quick && c.restaurant.etaMin > 20) return false
+    if (intent.filling && !(has(c, 'filling') || d.kcal >= 500)) return false
     return matchesTerms(c, intent.terms)
   })
 
-  const sorted = items.sort((a, b) => (intent.protein ? b.dish.proteinG - a.dish.proteinG : 0) || b.score - a.score)
+  // Respect the time of day unless they named a dish: no dosa at 8 pm for "something warm".
+  const inMeal = intent.terms.length ? items : items.filter(c => c.dish.meals.includes(s.meal))
+  const pool = inMeal.length ? inMeal : items
+  const sorted = pool.sort((a, b) => (intent.protein ? b.dish.proteinG - a.dish.proteinG : 0) || b.score - a.score)
   const picked = diverse(sorted)
-  if (!picked.length) return { text: CHAT.results.none(intent.budget), items: [] }
+  if (!picked.length) return { text: CHAT.results.none(intent.budget), items: [], refine: [] }
+  return reply(picked, intent)
+}
 
-  const top = picked[0]
-  const text = intent.protein
-    ? CHAT.results.protein(picked.length, top.dish.name, top.dish.proteinG)
-    : intent.budget
-      ? CHAT.results.budget(picked.length, intent.budget, top.restaurant.name)
-      : intent.light
-        ? CHAT.results.light(picked.length, top.restaurant.name)
-        : CHAT.results.generic(picked.length, top.restaurant.name)
-  return { text, items: picked }
+/** Lead with the pick and why it answers what they asked; offer at most two ways to narrow down. */
+function reply(items: Suggestion[], intent: Intent): Results {
+  const top = items[0]
+  // What they asked for comes first in the reason.
+  const asked = intent.protein ? REASONS.protein(top.dish.proteinG) : intent.light ? REASONS.kcal(top.dish.kcal) : intent.quick ? REASONS.fast(top.restaurant.etaMin) : undefined
+  const why = [...(asked ? [asked] : []), ...top.reasons.filter(r => r !== asked)]
+  let text = CHAT.results.pick(top.dish.name, top.restaurant.name, why.slice(0, 2))
+  if (wordCount(text) > 16) text = CHAT.results.pick(top.dish.name, top.restaurant.name, why.slice(0, 1))
+
+  const refine: Prompt[] = []
+  if (!intent.veg && items.some(c => c.dish.diet !== 'veg') && items.some(c => c.dish.diet === 'veg')) refine.push(REFINE.veg)
+  const prices = items.map(c => c.dish.price).sort((a, b) => a - b)
+  const under = Math.floor(prices[Math.floor(prices.length / 2)] / 50) * 50
+  if (!intent.budget && items.length > 2 && prices[0] <= under) refine.push(REFINE.budget(under))
+  if (!intent.quick && items.some(c => c.restaurant.etaMin <= 20) && items.some(c => c.restaurant.etaMin > 20)) refine.push(REFINE.quick)
+  return { text, items, refine: refine.slice(0, 2) }
 }
 
 function diverse(items: Suggestion[], max = 6) {

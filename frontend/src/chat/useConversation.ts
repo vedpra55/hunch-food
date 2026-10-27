@@ -7,16 +7,17 @@ import { openKitchens, parse, plan as makePlan, search, totals, type CartLine, t
 import { CHAT } from '../domain/copy'
 import { buildHome } from '../domain/recommend'
 import { DAY_NAMES } from '../domain/time'
-import type { Ask, Context, HomeModel, NotForMe, RuleChip, Suggestion, Tracking, UserProfile } from '../domain/types'
+import { ruleChips } from '../domain/rules'
+import type { Ask, Context, HomeModel, IconKey, NotForMe, Prompt, RuleId, Suggestion, Tracking, UserProfile } from '../domain/types'
 
 export type Msg =
   | { id: string; type: 'home' }
   | { id: string; type: 'user'; text: string }
   | { id: string; type: 'hunch'; text: string }
-  | { id: string; type: 'results'; text: string; items: Suggestion[] }
+  | { id: string; type: 'results'; text: string; items: Suggestion[]; refine: Prompt[]; query: string }
   | { id: string; type: 'plan'; text: string; plan: Plan; ordered: boolean }
   | { id: string; type: 'checkout'; lines: CartLine[]; status: CheckoutStatus }
-  | { id: string; type: 'tracking'; tracking: Tracking; step: number }
+  | { id: string; type: 'tracking'; text?: string; tracking: Tracking; step: number }
 
 export interface ConversationState {
   scenarioId: string
@@ -30,6 +31,8 @@ export interface ConversationState {
   /** Mood override for a moment (found it, focused…); falls back to the stage mood */
   mood?: Mood
   sheet?: Suggestion
+  /** Today sheet (switch rules off for today) */
+  today: boolean
   /** Set once an order is placed in this session */
   order?: { etaMin: number }
 }
@@ -39,7 +42,7 @@ const id = () => `m${++seq}`
 
 function initial(scenarioId: string): ConversationState {
   const s = scenarioById(scenarioId)
-  return { scenarioId: s.id, user: s.user, ctx: s.ctx, thread: [{ id: id(), type: 'home' }], cart: [], listening: false }
+  return { scenarioId: s.id, user: s.user, ctx: s.ctx, thread: [{ id: id(), type: 'home' }], cart: [], listening: false, today: false }
 }
 
 /** Hunch's timings: long enough to feel considered, short enough to never feel slow. */
@@ -89,15 +92,17 @@ export function useConversation(startScenario: string) {
 
   // ---------- talking ----------
 
+  /** `text` is what the user sees they said; `query` is what Hunch acts on (refinements add to the last request). */
   const send = useCallback(
-    async (text: string) => {
+    async (text: string, query = text) => {
       const s = ref.current
       if (s.working) return
       push({ id: id(), type: 'user', text })
 
-      if (s.order && /where|rider|how long|status/i.test(text)) {
+      const eta = s.order?.etaMin ?? s.ctx.activeOrder?.etaMin
+      if (eta && /where|rider|how long|status/i.test(text)) {
         await wait(600)
-        push({ id: id(), type: 'hunch', text: CHAT.track(s.order.etaMin, 'Arjun') })
+        push({ id: id(), type: 'hunch', text: CHAT.track(eta, s.ctx.activeOrder?.rider ?? 'Arjun') })
         return
       }
       if (/issue|wrong|missing|cold food|spilled|refund/i.test(text)) {
@@ -107,7 +112,7 @@ export function useConversation(startScenario: string) {
         return
       }
 
-      const intent = parse(text)
+      const intent = parse(query)
       const planning = intent.kind === 'plan'
       set({ working: planning ? CHAT.status.planning(intent.people ?? 2) : CHAT.status.searching(openKitchens(s.ctx)), mood: 'thinking' })
       await wait(planning ? T.plan : T.think)
@@ -120,7 +125,7 @@ export function useConversation(startScenario: string) {
         flash(p.lines.length ? 'found' : 'care')
       } else {
         const r = search(intent, user, ctx)
-        push({ id: id(), type: 'results', text: r.text, items: r.items })
+        push({ id: id(), type: 'results', text: r.text, items: r.items, refine: r.refine, query })
         set({ working: undefined })
         flash(r.items.length ? 'found' : 'care')
       }
@@ -191,10 +196,14 @@ export function useConversation(startScenario: string) {
       update(msgId, { status: 'paid' })
       set(s => ({ cart: [], working: undefined, order: { etaMin }, user: { ...s.user, orderCount: s.user.orderCount + 1 } }))
       const trackId = id()
-      push(
-        { id: id(), type: 'hunch', text: t.restaurants.length === 1 ? CHAT.placed(restaurant.name, etaMin) : CHAT.placedMany(t.restaurants.length, etaMin) },
-        { id: trackId, type: 'tracking', step: 1, tracking: { dish: DISH_BY_ID[m.lines[0].dishId], restaurant, etaMin, rider: 'Arjun' } },
-      )
+      // The confirmation lives inside the tracking card: one turn, one card.
+      push({
+        id: trackId,
+        type: 'tracking',
+        step: 1,
+        text: t.restaurants.length === 1 ? CHAT.placed() : CHAT.placedMany(t.restaurants.length),
+        tracking: { dish: DISH_BY_ID[m.lines[0].dishId], restaurant, etaMin, rider: 'Arjun' },
+      })
       await flash('found')
       await wait(T.rider)
       update(trackId, { step: 2 })
@@ -213,10 +222,26 @@ export function useConversation(startScenario: string) {
 
   // ---------- personalisation in the moment ----------
 
-  const ruleOff = useCallback(
-    (r: RuleChip) => {
-      set(s => ({ ctx: { ...s.ctx, offToday: [...s.ctx.offToday, r.id] } }))
-      push({ id: id(), type: 'hunch', text: CHAT.ruleOff(r.label) })
+  const refine = useCallback(
+    (msgId: string, p: Prompt) => {
+      const m = ref.current.thread.find(x => x.id === msgId)
+      if (m?.type !== 'results') return
+      send(p.text, `${m.query}, ${p.text}`)
+    },
+    [send],
+  )
+
+  const openToday = useCallback(() => set({ today: true }), [set])
+  const closeToday = useCallback(() => set({ today: false }), [set])
+
+  /** Switch a situational rule off (or back on) for today. */
+  const toggleRule = useCallback(
+    (ruleId: RuleId) => {
+      const s = ref.current
+      const label = ruleChips(s.user, { ...s.ctx, offToday: [] }).find(r => r.id === ruleId)?.label ?? ''
+      const off = s.ctx.offToday.includes(ruleId)
+      set({ ctx: { ...s.ctx, offToday: off ? s.ctx.offToday.filter(x => x !== ruleId) : [...s.ctx.offToday, ruleId] } })
+      push({ id: id(), type: 'hunch', text: off ? CHAT.ruleOn(label) : CHAT.ruleOff(label) })
     },
     [set, push],
   )
@@ -252,6 +277,14 @@ export function useConversation(startScenario: string) {
   const stageMood: Mood = state.order || home.stage === 'tracking' ? 'onTheWay' : home.stage === 'late' ? 'sleepy' : 'idle'
   const status = state.listening ? CHAT.status.listening : (state.working ?? (state.order ? CHAT.status.onTheWay(state.order.etaMin) : undefined))
   const openCheckout = state.thread.some(m => m.type === 'checkout' && (m.status === 'open' || m.status === 'paying'))
+  // Every situational rule that applies today, on or switched off, for the Today sheet.
+  const goalIcon: Record<string, IconKey> = { cutting: 'target', protein: 'barbell', light: 'leaf', budget: 'tag' }
+  const todayRules = ruleChips(state.user, { ...state.ctx, offToday: [] }).map(r => ({
+    id: r.id,
+    label: r.label,
+    icon: (r.id === 'fasting' ? 'lotus' : r.id === 'vegDay' ? 'leaf' : goalIcon[state.user.goal?.kind ?? 'cutting']) as IconKey,
+    on: !state.ctx.offToday.includes(r.id),
+  }))
 
   return {
     state,
@@ -259,6 +292,7 @@ export function useConversation(startScenario: string) {
     mood: state.mood ?? stageMood,
     status,
     openCheckout,
+    todayRules,
     latest: () => ref.current,
     /** Home as it is right now (for async flows that outlive a render) */
     homeNow: () => buildHome(ref.current.user, ref.current.ctx),
@@ -275,7 +309,10 @@ export function useConversation(startScenario: string) {
     changePlan,
     pay,
     notNow,
-    ruleOff,
+    refine,
+    openToday,
+    closeToday,
+    toggleRule,
     answerAsk,
     notForMe,
   }

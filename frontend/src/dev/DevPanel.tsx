@@ -26,7 +26,7 @@ const FLOWS: Flow[] = [
     scenario: 'first',
     run: async api => {
       await api.wait(1400)
-      api.send('Best biryani near me')
+      api.send('Best biryani nearby')
       await api.wait(2400)
       const s = firstItem(api)
       if (!s) return
@@ -122,12 +122,13 @@ export function DevPanel({ api }: { api: ConversationApi }) {
 
   const time = `${DAY_NAMES[ctx.now.getDay()].slice(0, 3)} ${ctx.now.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })}`
 
+  // Top-right: the top bar's right slot is empty on purpose, so dev mode never covers content. Sheets sit above it.
   return (
-    <div className="fixed right-3 top-3 z-[60] flex flex-col items-end gap-2 font-sans">
+    <div className="fixed right-3 top-[max(18px,env(safe-area-inset-top))] z-[45] flex flex-col items-end gap-2 font-sans lg:top-3">
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
-        className="inline-flex h-8 items-center gap-1.5 rounded-full bg-graphite-900 px-3 text-[12px] font-semibold text-white shadow-e3"
+        className="inline-flex h-7 items-center gap-1 rounded-full bg-graphite-900/85 px-2.5 text-[11px] font-semibold text-white shadow-e2 backdrop-blur lg:h-8 lg:bg-graphite-900 lg:px-3 lg:text-[12px]"
         aria-expanded={open}
       >
         {open ? <XIcon size={14} weight="bold" /> : <CodeIcon size={14} weight="bold" />}
@@ -141,7 +142,7 @@ export function DevPanel({ api }: { api: ConversationApi }) {
             exit={{ opacity: 0, y: -8, scale: 0.97 }}
             transition={spring.snappy}
             style={{ transformOrigin: '100% 0%' }}
-            className="grid max-h-[calc(100dvh-64px)] w-[300px] gap-4 overflow-y-auto rounded-[20px] bg-white p-4 text-graphite-900 shadow-e3"
+            className="grid max-h-[60dvh] w-[min(300px,calc(100vw-24px))] lg:max-h-[calc(100dvh-64px)] gap-4 overflow-y-auto rounded-[20px] bg-white p-4 text-graphite-900 shadow-e3"
           >
             <Block title="Play a flow">
               {FLOWS.map(f => (

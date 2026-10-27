@@ -1,7 +1,7 @@
-import { MinusIcon, PlusIcon, SparkleIcon, TagIcon } from '@phosphor-icons/react'
+import { MinusIcon, PlusIcon, TagIcon } from '@phosphor-icons/react'
 import { AnimatePresence, motion, useDragControls, type DragControls } from 'motion/react'
 import { useEffect, useState } from 'react'
-import { money } from '../../domain/copy'
+import { money, reasonSentence } from '../../domain/copy'
 import { clockLabel } from '../../domain/time'
 import type { NotForMe, Suggestion } from '../../domain/types'
 import { spring } from '../../design/motion'
@@ -95,31 +95,27 @@ function SheetBody({ s, drag, showNutrition, onAdd, onNotForMe }: Omit<DishSheet
           <p className="text-label font-normal text-graphite-700">
             <span className="font-medium text-graphite-900">{r.name}</span> · {r.area} · {r.distanceKm} km · {r.rating}★ ({r.ratingCount >= 1000 ? `${(r.ratingCount / 1000).toFixed(1)}k` : r.ratingCount})
           </p>
-          <p className="font-mono text-[13px] text-graphite-500">
+          <p className="text-[13px] tabular-nums text-graphite-500">
             {money(dish.price)} · {r.etaMin} min · {r.deliveryFee ? `${money(r.deliveryFee)} delivery` : 'Free delivery'} · {s.open ? `Open till ${clockLabel(r.closes)}` : s.opensLabel}
           </p>
         </div>
 
         {/* 5 why */}
         {s.reasons.length > 0 && (
-          <Section title="Why Hunch picked this">
-            <div className="flex flex-wrap gap-1.5">
-              {s.reasons.map(x => (
-                <Chip key={x}>{x}</Chip>
-              ))}
-            </div>
+          <Section title="Why Hunch picked it">
+            <p className="text-[15px] leading-[22px] text-graphite-800">{reasonSentence(s.reasons)}</p>
           </Section>
         )}
 
         {/* 6 what people say */}
         <Section title="What people say">
-          <div className="flex flex-wrap gap-1.5">
+          <ul className="grid gap-1">
             {dish.reviews.map(x => (
-              <span key={x} className="rounded-full bg-graphite-50 px-3 py-1.5 text-[13px] text-graphite-700">
+              <li key={x} className="text-[15px] leading-[22px] text-graphite-800">
                 “{x}”
-              </span>
+              </li>
             ))}
-          </div>
+          </ul>
         </Section>
 
         {/* 7 your usual / options */}
@@ -157,7 +153,7 @@ function SheetBody({ s, drag, showNutrition, onAdd, onNotForMe }: Omit<DishSheet
         {/* 9 nutrition, only with a goal */}
         {showNutrition && (
           <Section title="Nutrition">
-            <span className="font-mono text-label font-normal">
+            <span className="text-label font-normal tabular-nums">
               {dish.kcal} kcal · {dish.proteinG} g protein
             </span>
           </Section>
@@ -185,7 +181,7 @@ function SheetBody({ s, drag, showNutrition, onAdd, onNotForMe }: Omit<DishSheet
       <div className="flex items-center gap-3 border-t border-graphite-50 bg-white px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-3 sm:px-6">
         <div className="flex items-center gap-1 rounded-full bg-graphite-50 p-1">
           <IconButton aria-label="One less" size="sm" variant="ghost" onClick={() => setQty(q => Math.max(1, q - 1))} icon={<MinusIcon size={16} />} />
-          <span className="w-6 text-center font-mono text-label" aria-live="polite">
+          <span className="w-6 text-center text-label tabular-nums" aria-live="polite">
             {qty}
           </span>
           <IconButton aria-label="One more" size="sm" variant="ghost" onClick={() => setQty(q => q + 1)} icon={<PlusIcon size={16} />} />
@@ -193,7 +189,7 @@ function SheetBody({ s, drag, showNutrition, onAdd, onNotForMe }: Omit<DishSheet
         <Button size="lg" className="flex-1" disabled={!s.open} onClick={() => onAdd(s, qty, customisation)}>
           {s.open ? (
             <>
-              Add · <span className="font-mono">{money(dish.price * qty)}</span>
+              Add · <span className="tabular-nums">{money(dish.price * qty)}</span>
             </>
           ) : (
             s.opensLabel
@@ -207,10 +203,7 @@ function SheetBody({ s, drag, showNutrition, onAdd, onNotForMe }: Omit<DishSheet
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="grid gap-2">
-      <h3 className="flex items-center gap-1.5 text-caption uppercase tracking-[0.06em] text-graphite-500">
-        {title === 'Why Hunch picked this' && <SparkleIcon size={12} weight="fill" className="text-indigo-500" />}
-        {title}
-      </h3>
+      <h3 className="text-[13px] font-medium text-graphite-500">{title}</h3>
       {children}
     </div>
   )

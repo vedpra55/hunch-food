@@ -29,6 +29,27 @@ describe('search', () => {
       expect(x.open).toBe(true)
     }
     expect(r.text).toContain(r.items[0].dish.name)
+    expect(r.text).toContain(`${r.items[0].dish.proteinG} g protein`)
+  })
+
+  it('naming a dish finds it, even a sweet one on a fasting day', () => {
+    const n = scenarioById('navratri')
+    expect(search(parse('Fruit, no sugar'), n.user, n.ctx).items[0]?.dish.id).toBe('fruit-bowl')
+  })
+
+  it('surprise me skips the usuals; replies respect the time of day', () => {
+    const r = search(parse('Surprise me'), dinner.user, dinner.ctx)
+    for (const x of r.items) expect(dinner.user.usuals.some(u => u.dishId === x.dish.id)).toBe(false)
+    const w = search(parse('Something warm and light'), dinner.user, dinner.ctx)
+    for (const x of w.items) expect(x.dish.meals).toContain('dinner')
+  })
+
+  it('a refinement narrows the same request', () => {
+    const r = search(parse('something warm, under ₹300'), dinner.user, dinner.ctx)
+    expect(r.refine.map(x => x.text)).toContain('Only veg')
+    const veg = search(parse('something warm, under ₹300, only veg'), dinner.user, dinner.ctx)
+    for (const x of veg.items) expect(x.dish.diet).toBe('veg')
+    expect(veg.refine.map(x => x.text)).not.toContain('Only veg')
   })
 
   it('a veg day still applies to typed requests', () => {
@@ -39,7 +60,10 @@ describe('search', () => {
   it('replies stay short and name a restaurant when there are results', () => {
     for (const q of ['biryani', 'something light', 'under 200', 'spicy veg', 'dessert', 'coffee']) {
       const r = search(parse(q), dinner.user, dinner.ctx)
-      expect(wordCount(r.text)).toBeLessThanOrEqual(14)
+      expect(wordCount(r.text)).toBeLessThanOrEqual(16)
+      // lead with the pick, never a count
+      if (r.items.length) expect(r.text.startsWith(r.items[0].dish.name)).toBe(true)
+      expect(r.refine.length).toBeLessThanOrEqual(2)
       if (r.items.length && !/protein/.test(q)) expect(r.text).toMatch(new RegExp(r.items.map(i => i.restaurant.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')))
     }
   })

@@ -1,9 +1,9 @@
 import { DISH_BY_ID, MENU } from '../data/menu'
 import { RESTAURANT_BY_ID } from '../data/restaurants'
-import { ASKS, GROUP_TITLES, LINES, REASONS, RULE_STARTERS, STARTERS } from './copy'
+import { ASKS, GROUP_TITLES, LINES, PROMPTS, REASONS } from './copy'
 import { activeGoal, allowed, fastingDay, inferredVegDayToday, ruleChips, vegDayToday } from './rules'
 import { DAY_NAMES, clockLabel, isOpen, mealAt, weekday } from './time'
-import type { Context, Dish, Goal, Group, HomeModel, Meal, Restaurant, Stage, Suggestion, Usual, UserProfile } from './types'
+import type { Context, ContextItem, Dish, Goal, Group, HomeModel, IconKey, Meal, Prompt, Restaurant, Stage, Suggestion, Usual, UserProfile } from './types'
 
 export interface Catalogue {
   menu: Dish[]
@@ -42,13 +42,16 @@ export interface Signals {
 export function buildHome(user: UserProfile, ctx: Context, cat: Catalogue = DEFAULT_CATALOGUE): HomeModel {
   if (ctx.activeOrder) {
     const dish = DISH_BY_ID[ctx.activeOrder.dishId]
+    const restaurant = cat.restaurants[dish.restaurantId]
     return {
       stage: 'tracking',
-      line: LINES.tracking(ctx.activeOrder.etaMin, ctx.activeOrder.rider),
+      // Time and weather only: the ETA lives in the tracking block, once.
+      context: contextRow(signals(user, ctx)).filter(c => !c.rule),
+      line: LINES.tracking(restaurant.name),
       rules: [],
       groups: [],
-      starters: STARTERS.tracking,
-      tracking: { dish, restaurant: cat.restaurants[dish.restaurantId], ...ctx.activeOrder },
+      prompts: PROMPTS.tracking,
+      tracking: { dish, restaurant, ...ctx.activeOrder },
     }
   }
 
@@ -60,12 +63,15 @@ export function buildHome(user: UserProfile, ctx: Context, cat: Catalogue = DEFA
 
   return {
     stage: s.stage,
+    context: contextRow(s),
     line: line(s, usual),
     rules: ruleChips(user, ctx),
     ask: ask(s),
+    // Your usual when it fits the moment; otherwise the best fit Hunch ranked.
+    pick: usual ?? bestFit(groups),
     usual,
     groups,
-    starters: s.fastDay ? RULE_STARTERS.fasting : s.vegDay ? RULE_STARTERS.vegDay : STARTERS[s.stage],
+    prompts: prompts(s),
   }
 }
 
@@ -150,11 +156,10 @@ function score(d: Dish, r: Restaurant, s: Signals) {
   return Math.round(x * 10) / 10
 }
 
+/** One decisive fact at most. Never kcal or protein: those belong to the sheet. */
 function tag(d: Dish, s: Signals): string | undefined {
   if (s.usuals.has(d.id)) return 'Usual'
   if (d.offerOff) return `₹${d.offerOff} off`
-  if (s.goal?.kind === 'protein' && d.proteinG >= 20) return `${d.proteinG} g protein`
-  if (s.goal?.kind === 'cutting' && d.kcal <= 600) return `${d.kcal} kcal`
   return undefined
 }
 
@@ -163,7 +168,7 @@ function reasons(d: Dish, r: Restaurant, s: Signals): string[] {
   const u = s.usuals.get(d.id)
   if (u) out.push(REASONS.usual(u.times))
   if (s.user.favouriteRestaurants.includes(r.id)) out.push(REASONS.favourite())
-  if (s.vegDay) out.push(REASONS.vegDay())
+  // A veg day is already said once, in the context row; repeating it on every dish is noise.
   if (s.fastDay) out.push(REASONS.fasting())
   const g = s.goal
   if (g?.kind === 'cutting' && d.kcal <= 600) out.push(REASONS.cutting())
@@ -171,7 +176,7 @@ function reasons(d: Dish, r: Restaurant, s: Signals): string[] {
   if (g?.kind === 'light' && d.traits.includes('light')) out.push(REASONS.light())
   if (g?.kind === 'budget' && g.budget && d.price <= g.budget) out.push(REASONS.budget(g.budget))
   if (s.rainy && d.traits.includes('warm')) out.push(REASONS.rain())
-  if (s.hot && (d.traits.includes('cool') || d.traits.includes('fresh'))) out.push(REASONS.hot(s.ctx.weather.tempC))
+  if (s.hot && (d.traits.includes('cool') || d.traits.includes('fresh'))) out.push(REASONS.hot())
   if (d.offerOff) out.push(REASONS.offer(d.offerOff))
   if (r.etaMin <= 20) out.push(REASONS.fast(r.etaMin))
   out.push(REASONS.rating(r.rating, r.ratingCount))
@@ -298,6 +303,48 @@ function line(s: Signals, usual?: Suggestion): string {
     case 'late':
       return LINES.late()
   }
+}
+
+/** The top-ranked meal; a drink or dessert only if nothing else exists. */
+function bestFit(groups: Group[]): Suggestion | undefined {
+  const all = groups.flatMap(g => g.items)
+  return all.find(c => !has(c, 'drink') && !has(c, 'sweet')) ?? all[0]
+}
+
+/** Time, notable weather and today's situational rules. Rules win when space is short. */
+function contextRow(s: Signals): ContextItem[] {
+  const { ctx } = s
+  const daytime = s.meal === 'breakfast' || s.meal === 'lunch' || s.meal === 'snack'
+  const time: ContextItem = { icon: daytime ? 'sun' : 'moon', text: ctx.now.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' }) }
+  const weather: ContextItem | undefined = s.rainy
+    ? { icon: 'rain', text: 'Light rain' }
+    : s.hot
+      ? { icon: 'hot', text: `${ctx.weather.tempC}°` }
+      : s.cold
+        ? { icon: 'cold', text: `${ctx.weather.tempC}°` }
+        : undefined
+  if (s.stage === 'first') return [time, weather ?? { icon: 'pin', text: ctx.area }]
+
+  const goalIcon: Record<string, IconKey> = { cutting: 'target', protein: 'barbell', light: 'leaf', budget: 'tag' }
+  const rules: ContextItem[] = ruleChips(s.user, ctx).map(r => ({
+    icon: r.id === 'fasting' ? 'lotus' : r.id === 'vegDay' ? 'leaf' : goalIcon[s.goal?.kind ?? 'cutting'],
+    text: r.id === 'fasting' ? `${r.label} · day ${s.fastDay}` : r.label,
+    rule: r.id,
+  }))
+  const items = [time, ...(weather ? [weather] : []), ...rules]
+  while (items.length > 3) items.splice(items[0] === time ? 0 : 1, 1)
+  return items
+}
+
+/** Three things the user might say right now. Rules first, then weather, then the meal. */
+function prompts(s: Signals): Prompt[] {
+  const lightGoal = s.goal?.kind === 'cutting' || s.goal?.kind === 'light'
+  if (s.fastDay) return PROMPTS.fasting
+  if (s.vegDay) return PROMPTS.vegDay
+  if (s.stage === 'first') return PROMPTS.first
+  if (s.hot) return PROMPTS.hot
+  if ((s.rainy || s.cold) && s.meal !== 'breakfast' && s.meal !== 'late') return lightGoal ? PROMPTS.warmLight : PROMPTS.warm
+  return PROMPTS[s.meal]
 }
 
 function ask(s: Signals) {
