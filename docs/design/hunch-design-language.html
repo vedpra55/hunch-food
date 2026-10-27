@@ -1,0 +1,783 @@
+<title>Hunch Design Language</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Instrument+Sans:wght@400..700&family=Geist+Mono:wght@400..600&family=Mukta:wght@400;600&display=swap">
+<style>
+/* Layout: one warm canvas; Hunch is the hero, screens sit in a wrapping gallery, specs follow in quiet bands. Light mode only, by design. */
+:root{
+  --canvas:#FAF9F6; --surface:#FFFFFF; --ink:#1A1611; --ink-2:#6E665B; --ink-3:#ABA398; --tint:#F2EFEA;
+  --saffron:#FF9F1C; --chili:#F2542D; --gold:#E9A800; --gold-ink:#8A6200; --basil:#1F9D55; --basil-ink:#167A42;
+  --lagoon:#2F7CF0; --lagoon-ink:#1D5BC2; --lavender:#8B7CF2; --lavender-ink:#5B4BCF; --indigo:#3D3A8C;
+  --masala:linear-gradient(120deg,#FFB547 0%,#FF6A3D 50%,#E2366E 100%);
+  --shadow-soft:0 18px 40px -22px rgba(26,22,17,.28);
+  --f-display:"Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --f-ui:"Instrument Sans", "Helvetica Neue", system-ui, sans-serif;
+  --f-mono:"Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --f-hi:"Mukta", "Noto Sans Devanagari", sans-serif;
+  --r-sm:12px; --r-md:20px; --r-lg:28px;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+body{background:var(--canvas);color:var(--ink);font:16px/1.5 var(--f-ui);-webkit-font-smoothing:antialiased}
+.wrap{max-width:1240px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 80px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;letter-spacing:-.02em}
+h2{font-size:clamp(28px,4vw,40px);line-height:1.1;font-weight:700}
+p{margin:0}
+.eyebrow{font:600 12px/16px var(--f-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+.lede{color:var(--ink-2);max-width:60ch}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,a:focus-visible{outline:2px solid var(--chili);outline-offset:3px}
+
+/* top bar */
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:8px 8px}
+.brand{display:flex;align-items:center;gap:10px;font:700 24px/1 var(--f-display);letter-spacing:-.03em}
+.brand i{width:22px;height:22px;border-radius:50%;background:var(--masala);box-shadow:0 6px 16px -6px #FF6A3D}
+.top .eyebrow{text-align:right}
+
+/* hero */
+.hero{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:24px;align-items:center;padding-block:28px 56px}
+.stage{position:relative;display:grid;place-items:center;min-height:420px;border-radius:40px;overflow:hidden;background:var(--surface)}
+.stage .pool{position:absolute;inset:-20%;background:radial-gradient(40% 40% at 50% 50%,var(--pool,#FF9F1C33),transparent 70%);transition:background .6s}
+#hero{position:relative;touch-action:none}
+.stage-cap{position:absolute;left:24px;bottom:20px;right:24px;display:flex;justify-content:space-between;gap:12px;align-items:baseline}
+.stage-cap b{font:700 20px/1 var(--f-display)}
+.stage-cap span{font-size:13px;color:var(--ink-2);text-align:right;max-width:34ch}
+.hero h1{font-size:clamp(40px,6vw,72px);line-height:.98;font-weight:750}
+.hero h1 em{font-style:normal;background:var(--masala);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero .lede{margin-top:16px;font-size:18px}
+.moods{display:flex;flex-wrap:wrap;gap:8px;margin-top:28px}
+.mood{border:0;border-radius:999px;padding:9px 14px 9px 10px;background:var(--tint);display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:550;transition:transform .15s,background .2s}
+.mood:hover{transform:translateY(-1px)}
+.mood i{width:12px;height:12px;border-radius:50%;background:var(--c)}
+.mood[aria-pressed="true"]{background:var(--ink);color:#fff}
+.hint{margin-top:14px;font-size:13px;color:var(--ink-3)}
+
+/* section */
+section.band{padding-block:56px 8px;display:grid;gap:28px}
+.band-head{display:grid;gap:10px;max-width:760px}
+
+/* phones */
+.gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:40px 24px;justify-items:center}
+figure{margin:0;display:grid;gap:14px;justify-items:center;max-width:100%}
+figcaption{text-align:center;display:grid;gap:2px}
+figcaption b{font:700 17px/1.2 var(--f-display)}
+figcaption span{font-size:13px;color:var(--ink-2)}
+.phone{width:300px;max-width:100%;height:640px;border-radius:46px;background:var(--surface);position:relative;overflow:hidden;
+  box-shadow:0 0 0 7px #fff,0 0 0 8px rgba(26,22,17,.07),0 40px 70px -40px rgba(26,22,17,.35)}
+.screen{position:absolute;inset:0;padding:14px 16px 18px;display:flex;flex-direction:column;gap:12px}
+.screen>*{position:relative}
+.pool-a{position:absolute!important;border-radius:50%;filter:blur(36px);pointer-events:none}
+.status{display:flex;justify-content:space-between;align-items:center;font:600 13px/1 var(--f-ui);padding:4px 10px 0}
+.status .sig{display:flex;gap:2px;align-items:flex-end}
+.status .sig i{display:block;width:3px;background:var(--ink);border-radius:1px}
+.island{align-self:center;display:flex;align-items:center;gap:6px;padding:2px 14px 2px 2px;border-radius:999px;background:rgba(255,255,255,.86);
+  box-shadow:0 10px 26px -14px rgba(26,22,17,.35);font:600 13px/1 var(--f-ui);min-height:46px;backdrop-filter:blur(10px)}
+.island.solo{padding:2px}
+.island .mono{font-size:12px;color:var(--ink-2)}
+.ctx{align-self:flex-start;display:inline-flex;gap:6px;align-items:center;font-size:12px;font-weight:550;color:var(--ink-2);background:rgba(255,255,255,.7);padding:6px 10px;border-radius:999px}
+.ctx i{width:6px;height:6px;border-radius:50%;background:var(--c,var(--saffron))}
+.say{font:700 26px/1.08 var(--f-display);letter-spacing:-.02em}
+.say small{display:block;font:500 14px/1.4 var(--f-ui);color:var(--ink-2);letter-spacing:0;margin-top:6px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:550;padding:6px 10px;border-radius:999px;background:var(--tint);color:var(--ink)}
+.chip i{width:6px;height:6px;border-radius:50%;background:var(--c,var(--ink-3))}
+.chip.on{background:var(--c);color:#fff}
+.chip.on i{background:#fff}
+.btn{border:0;border-radius:999px;padding:14px 18px;font:650 15px/1 var(--f-ui);display:flex;align-items:center;justify-content:center;gap:8px}
+.btn.masala{background:var(--masala);color:#fff;box-shadow:0 14px 28px -14px #FF6A3D}
+.btn.ink{background:var(--ink);color:#fff}
+.btn.ghost{background:var(--tint)}
+.row{display:flex;gap:8px;align-items:center}
+.grow{flex:1;min-width:0}
+.meta{font:500 12px/1.3 var(--f-mono);color:var(--ink-2);font-variant-numeric:tabular-nums}
+.dish{font:700 20px/1.1 var(--f-display);letter-spacing:-.01em}
+.vm{display:inline-grid;place-items:center;width:12px;height:12px;border:1.5px solid var(--c);border-radius:2px;flex:none}
+.vm::after{content:"";width:5px;height:5px;border-radius:50%;background:var(--c)}
+.vm.nv::after{border-radius:0;width:0;height:0;background:none;border-left:3px solid transparent;border-right:3px solid transparent;border-bottom:5px solid var(--c)}
+canvas.plate{display:block}
+.float{animation:float 6s ease-in-out infinite}
+@keyframes float{50%{transform:translateY(-8px)}}
+
+/* chat */
+.bubble{align-self:flex-end;max-width:80%;background:var(--ink);color:#fff;padding:10px 14px;border-radius:20px 20px 6px 20px;font-size:14px}
+.carousel{display:flex;align-items:center;justify-content:center;gap:0;margin-inline:-16px;height:150px}
+.carousel canvas{flex:none}
+.carousel .side{filter:blur(1.4px);opacity:.8}
+.offer{border-radius:var(--r-md);padding:12px 14px;background:linear-gradient(120deg,#FFF6D8,#FFEFC2);position:relative;overflow:hidden}
+.offer::after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.75) 50%,transparent 65%);transform:translateX(-100%);animation:glint 3.2s ease-in-out infinite}
+@keyframes glint{60%,100%{transform:translateX(100%)}}
+.offer b{font:700 15px/1.2 var(--f-display)}
+.save{font:600 13px/1 var(--f-mono);color:var(--gold-ink)}
+.composer{margin-top:auto;display:flex;align-items:center;gap:8px;background:var(--tint);border-radius:999px;padding:6px 6px 6px 16px;font-size:14px;color:var(--ink-3)}
+.mic{width:40px;height:40px;border-radius:50%;background:var(--masala);display:grid;place-items:center;box-shadow:0 10px 20px -10px #FF6A3D;flex:none}
+.mic svg{width:18px;height:18px}
+
+/* checkout */
+.line{display:flex;align-items:center;gap:10px;font-size:14px}
+.line .grow{display:grid;gap:2px}
+.line .meta{font-size:11px}
+.bill{display:grid;gap:6px;font-size:13px;color:var(--ink-2);padding-top:4px}
+.bill div{display:flex;justify-content:space-between}
+.bill .gold{color:var(--gold-ink)}
+.bill .total{color:var(--ink);font-weight:600;font-size:15px;padding-top:6px}
+.prefill{display:grid;gap:2px;padding:10px 14px;background:var(--tint);border-radius:var(--r-sm);font-size:13px}
+.prefill span{color:var(--ink-2);font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+
+/* tracking */
+.eta{font:600 56px/1 var(--f-mono);letter-spacing:-.04em;color:var(--lagoon-ink)}
+.eta small{font:600 16px/1 var(--f-ui);letter-spacing:0;color:var(--ink-2);margin-left:4px}
+.route{position:relative;height:170px}
+.route svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.route canvas{position:absolute;left:0;top:0}
+.steps{display:flex;justify-content:space-between;font-size:11px;font-weight:600;color:var(--ink-3)}
+.steps .done{color:var(--lagoon-ink)}
+.care{border-radius:var(--r-md);padding:12px 14px;background:#F1EEFF;display:grid;gap:8px;font-size:13px}
+.care b{font:700 15px/1.25 var(--f-display)}
+
+/* palette */
+.swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:28px 16px}
+.sw{display:grid;gap:10px}
+.sw .orb{width:84px;height:84px;border-radius:50%;background:var(--c);box-shadow:inset -10px -14px 24px rgba(0,0,0,.14),inset 10px 12px 20px rgba(255,255,255,.35),0 18px 30px -16px var(--c)}
+.sw b{font:700 16px/1 var(--f-display)}
+.sw span{font-size:13px;color:var(--ink-2)}
+.base{display:flex;flex-wrap:wrap;gap:10px}
+.base div{display:grid;gap:6px;font-size:12px;color:var(--ink-2)}
+.base i{display:block;width:96px;height:56px;border-radius:var(--r-sm);background:var(--c);box-shadow:inset 0 0 0 1px rgba(26,22,17,.06)}
+.masala-bar{height:72px;border-radius:999px;background:var(--masala);display:flex;align-items:center;padding:0 28px;color:#fff;font:700 22px/1 var(--f-display);box-shadow:0 26px 40px -26px #FF6A3D}
+
+/* type */
+.type{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px}
+.spec{background:var(--surface);border-radius:var(--r-lg);padding:24px;display:grid;gap:12px;align-content:start}
+.spec .big{font-size:56px;line-height:1;letter-spacing:-.03em}
+.spec p{color:var(--ink-2);font-size:14px}
+
+/* motion demo */
+.demo{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;align-items:start}
+.demo-box{background:var(--surface);border-radius:36px;padding:20px;min-height:430px;display:flex;flex-direction:column;align-items:center;gap:14px;position:relative;overflow:hidden}
+.demo-box .chips{justify-content:center;min-height:30px}
+.emerge{animation:emerge .42s cubic-bezier(.2,.9,.25,1.15) both;transform-origin:50% -40px}
+@keyframes emerge{from{opacity:0;transform:translateY(-16px) scale(.86);filter:blur(8px)}}
+.pick{width:100%;max-width:300px;display:grid;justify-items:center;gap:6px;text-align:center}
+.tokens{display:grid;gap:2px;font-size:14px}
+.tokens div{display:grid;grid-template-columns:130px minmax(0,1fr);gap:12px;padding:10px 0}
+.tokens div+div{box-shadow:0 -1px 0 var(--tint)}
+.tokens code{font:500 13px/1.4 var(--f-mono)}
+.tokens span{color:var(--ink-2)}
+
+/* stage table */
+.scroll{overflow-x:auto;border-radius:var(--r-lg);background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:760px;font-size:14px}
+th,td{text-align:left;padding:14px 16px;vertical-align:top}
+th{font:600 12px/1 var(--f-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
+tbody tr:nth-child(odd){background:#FCFBF9}
+td b{font-family:var(--f-display);font-size:15px}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--c);margin-right:8px;vertical-align:middle}
+.note{font-size:13px;color:var(--ink-3)}
+
+@media (max-width:860px){
+  .hero,.demo{grid-template-columns:minmax(0,1fr)}
+  .stage{min-height:360px}
+}
+@media (prefers-reduced-motion:reduce){
+  .float,.offer::after{animation:none}
+  .emerge{animation:fade .2s both}
+  @keyframes fade{from{opacity:0}}
+}
+</style>
+
+<div class="wrap">
+  <div class="top">
+    <div class="brand"><i></i>hunch</div>
+    <div class="eyebrow">Design language · v0.1</div>
+  </div>
+
+  <section class="hero" aria-label="Meet Hunch">
+    <div class="stage" id="stage">
+      <div class="pool"></div>
+      <canvas id="hero" aria-label="Hunch, an animated orb character"></canvas>
+      <div class="stage-cap"><b id="mood-name">Idle</b><span id="mood-note">Waiting for you. Breathes slowly, eyes follow your finger.</span></div>
+    </div>
+    <div>
+      <div class="eyebrow">Meet Hunch</div>
+      <h1 style="margin-top:10px">A living drop of <em>flavour</em> that orders for you.</h1>
+      <p class="lede">Hunch has no face to fake. It feels through its eyes, its shape, its colour and its glow. It sits on top of every screen, and everything you see grows out of it.</p>
+      <div class="moods" id="moods" role="group" aria-label="Hunch moods"></div>
+      <p class="hint">Tap a mood. Move your pointer over Hunch and it looks at you.</p>
+    </div>
+  </section>
+
+  <section class="band" aria-labelledby="s-screens">
+    <div class="band-head">
+      <div class="eyebrow">Every stage has an identity</div>
+      <h2 id="s-screens">Six moments, one character</h2>
+      <p class="lede">Each stage owns a colour pool and a Hunch mood. There is only ever one Hunch on screen: in tracking it leaves the island and rides the route. Plates are generated placeholders; production uses real top-down photography cut to a circle.</p>
+    </div>
+    <div class="gallery">
+
+      <!-- 1 Onboarding -->
+      <figure>
+        <div class="phone"><div class="screen">
+          <div class="pool-a" style="width:320px;height:320px;left:-40px;top:60px;background:#FFC46B66"></div>
+          <div class="pool-a" style="width:240px;height:240px;right:-90px;top:240px;background:#E2366E33"></div>
+          <div class="status"><span>9:41</span><span class="sig"><i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i style="height:10px"></i></span></div>
+          <div style="display:grid;place-items:center;margin-top:6px"><canvas data-hunch="found" data-size="132" data-look="0,.2"></canvas></div>
+          <div class="say" style="text-align:center">Hi, I'm Hunch.<small>Tap what you've been craving lately.</small></div>
+          <div style="height:120px">
+            <canvas class="plate float" data-plate="biryani" data-size="78" style="position:absolute;left:4px;top:8px"></canvas>
+            <canvas class="plate float" data-plate="bowl" data-size="92" style="position:absolute;left:96px;top:24px;animation-delay:-2s;filter:drop-shadow(0 0 0 transparent)"></canvas>
+            <canvas class="plate float" data-plate="pizza" data-size="70" style="position:absolute;right:4px;top:4px;animation-delay:-4s"></canvas>
+          </div>
+          <div class="chips">
+            <span class="chip on" style="--c:var(--basil)"><i></i>High protein</span>
+            <span class="chip"><i style="--c:var(--saffron)"></i>Cutting</span>
+            <span class="chip"><i style="--c:var(--basil)"></i>Veg</span>
+            <span class="chip"><i style="--c:var(--chili)"></i>Spicy</span>
+            <span class="chip"><i style="--c:var(--lavender)"></i>Jain</span>
+          </div>
+          <div class="row" style="justify-content:center;gap:4px;font-size:13px;font-weight:600">
+            <span class="chip" style="background:var(--ink);color:#fff">English</span><span class="chip" style="font-family:var(--f-hi)">हिंदी</span><span class="chip">Hinglish</span>
+          </div>
+          <button class="btn masala" style="margin-top:auto">That's me</button>
+        </div></div>
+        <figcaption><b>Onboarding</b><span>Masala pool · Hunch: Found it · 30 seconds, no forms</span></figcaption>
+      </figure>
+
+      <!-- 2 Now / proactive -->
+      <figure>
+        <div class="phone"><div class="screen" style="background:linear-gradient(180deg,#FFE9DC 0%,#FFF4EC 38%,#fff 70%)">
+          <div class="pool-a" style="width:300px;height:220px;left:0;top:250px;background:#F59A1E40"></div>
+          <div class="status"><span>9:41</span><span class="sig"><i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i style="height:10px"></i></span></div>
+          <div class="island"><canvas data-hunch="idle" data-size="44" data-look=".3,.5"></canvas><span>Your usual is ready</span></div>
+          <span class="ctx" style="--c:var(--lagoon)"><i></i>6:40 PM · Light rain · Indiranagar</span>
+          <div class="say">Baarish aur biryani?<small>Your Friday usual from Meghana's. One tap.</small></div>
+          <div style="display:grid;place-items:center"><canvas class="plate" data-plate="biryani" data-size="176" style="filter:drop-shadow(0 22px 24px rgba(201,120,31,.35))"></canvas></div>
+          <div class="row"><span class="vm nv" style="--c:#8B3A1C"></span><span class="dish grow">Chicken Dum Biryani</span></div>
+          <div class="meta" style="margin-top:-6px">₹289 · 32 min · 4.6★ · 780 kcal</div>
+          <div class="chips">
+            <span class="chip"><i style="--c:var(--lagoon)"></i>Raining → comfort</span>
+            <span class="chip"><i style="--c:var(--saffron)"></i>Your Friday usual</span>
+          </div>
+          <div class="row" style="margin-top:auto">
+            <button class="btn ghost">Lighter</button>
+            <button class="btn masala grow">Order · <span class="mono">₹289</span></button>
+          </div>
+        </div></div>
+        <figcaption><b>Now · Proactive</b><span>Dusk wash · Hunch: Idle · ready before you type</span></figcaption>
+      </figure>
+
+      <!-- 3 Conversation -->
+      <figure>
+        <div class="phone"><div class="screen">
+          <div class="pool-a" style="width:280px;height:200px;left:10px;top:200px;background:#FFC46B40"></div>
+          <div class="status"><span>9:41</span><span class="sig"><i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i style="height:10px"></i></span></div>
+          <div class="island"><canvas data-hunch="deal" data-size="44" data-look="0,.6"></canvas><span>Found a better deal</span></div>
+          <div class="bubble">gym day. high protein, under 400 cal, not boring</div>
+          <div class="chips">
+            <span class="chip"><i style="--c:var(--basil)"></i>35 g+ protein</span>
+            <span class="chip"><i style="--c:var(--saffron)"></i>Under 400 kcal</span>
+            <span class="chip"><i style="--c:var(--ink-3)"></i>Skip paneer, had it Tue</span>
+          </div>
+          <div class="carousel">
+            <canvas class="plate side" data-plate="salad" data-size="84"></canvas>
+            <canvas class="plate" data-plate="bowl" data-size="146" style="filter:drop-shadow(0 18px 18px rgba(200,116,46,.3))"></canvas>
+            <canvas class="plate side" data-plate="tikka" data-size="84"></canvas>
+          </div>
+          <div style="text-align:center;display:grid;gap:2px">
+            <span class="dish">Grilled Chicken Bowl</span>
+            <span class="meta">38 g protein · 380 kcal · ₹269</span>
+          </div>
+          <div class="offer">
+            <div class="row"><div class="grow"><b>Same bowl, 20% off at FitBowl Co.</b><div class="meta" style="margin-top:3px">4.5★ · 26 min · 1.2 km</div></div><span class="save">−₹54</span></div>
+          </div>
+          <div class="composer"><span class="grow">Ask for anything…</span><span class="mic"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span></div>
+        </div></div>
+        <figcaption><b>Conversation</b><span>Saffron pool · Hunch: Deal · reasoning in 3 chips, offer intercepts</span></figcaption>
+      </figure>
+
+      <!-- 4 Checkout -->
+      <figure>
+        <div class="phone"><div class="screen">
+          <div class="status"><span>9:41</span><span class="sig"><i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i style="height:10px"></i></span></div>
+          <div class="island"><canvas data-hunch="trust" data-size="44" data-look="0,.5"></canvas><span>All set. Just pay.</span></div>
+          <div class="say" style="font-size:22px">Your order</div>
+          <div class="line"><canvas class="plate" data-plate="bowl" data-size="48"></canvas><div class="grow"><span>Grilled Chicken Bowl</span><span class="meta">Extra chicken · no onion</span></div><span class="mono">₹269</span></div>
+          <div class="line"><canvas class="plate" data-plate="coffee" data-size="48"></canvas><div class="grow"><span>Cold Coffee</span><span class="meta">No sugar · your usual</span></div><span class="mono">₹120</span></div>
+          <div class="bill mono">
+            <div><span>Item total</span><span>₹389</span></div>
+            <div><span>Delivery</span><span>₹0</span></div>
+            <div class="gold"><span>FitBowl 20% off</span><span>−₹54</span></div>
+            <div class="total"><span>To pay</span><span>₹335</span></div>
+          </div>
+          <div class="prefill"><span>Deliver to</span>Home · 12th Main, Indiranagar</div>
+          <div class="prefill"><span>Pay with</span>UPI · GPay ··4821</div>
+          <button class="btn ink" style="margin-top:auto">Pay <span class="mono">₹335</span></button>
+          <div class="note" style="text-align:center;margin-top:-4px">Razorpay · test mode · Undo for 5 s after paying</div>
+        </div></div>
+        <figcaption><b>Checkout</b><span>Neutral ink · Hunch: Trust · everything stills, one button</span></figcaption>
+      </figure>
+
+      <!-- 5 Tracking -->
+      <figure>
+        <div class="phone"><div class="screen" style="background:linear-gradient(180deg,#EAF2FF 0%,#fff 60%)">
+          <div class="status"><span>9:41</span><span class="sig"><i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i style="height:10px"></i></span></div>
+          <div class="island" style="padding:2px 16px"><span>On the way</span><span class="mono">#HN-2048</span></div>
+          <div class="eta"><span id="eta">12</span><small>min</small></div>
+          <p style="font-size:14px;color:var(--ink-2);margin-top:-4px">Arjun picked up your bowl. Hunch is riding along.</p>
+          <div class="route" id="route">
+            <svg viewBox="0 0 268 170" preserveAspectRatio="none" aria-hidden="true">
+              <path id="route-path" d="M18 140 C 70 150, 70 60, 130 78 S 210 120, 250 28" fill="none" stroke="#2F7CF0" stroke-opacity=".18" stroke-width="10" stroke-linecap="round"/>
+              <path d="M18 140 C 70 150, 70 60, 130 78 S 210 120, 250 28" fill="none" stroke="#2F7CF0" stroke-width="2.5" stroke-dasharray="2 7" stroke-linecap="round"/>
+              <circle cx="18" cy="140" r="7" fill="#fff" stroke="#2F7CF0" stroke-width="3"/>
+              <circle cx="250" cy="28" r="9" fill="#2F7CF0"/><circle cx="250" cy="28" r="3.5" fill="#fff"/>
+              <text x="30" y="162" font-size="11" font-weight="600" fill="#6E665B" font-family="Instrument Sans, sans-serif">FitBowl Co.</text>
+              <text x="216" y="58" font-size="11" font-weight="600" fill="#6E665B" font-family="Instrument Sans, sans-serif">Home</text>
+            </svg>
+            <canvas data-hunch="track" data-size="58" id="rider"></canvas>
+          </div>
+          <div class="steps"><span class="done">Confirmed</span><span class="done">Cooked</span><span class="done">Picked up</span><span>At your door</span></div>
+          <div class="row" style="margin-top:auto">
+            <button class="btn ghost grow">Cancel</button>
+            <button class="btn ghost grow">Help</button>
+          </div>
+        </div></div>
+        <figcaption><b>Tracking</b><span>Lagoon pool · Hunch: On the way · leaves the island to ride the route</span></figcaption>
+      </figure>
+
+      <!-- 6 Support -->
+      <figure>
+        <div class="phone"><div class="screen" style="background:linear-gradient(180deg,#F3F0FF 0%,#fff 55%)">
+          <div class="pool-a" style="width:260px;height:260px;left:20px;top:80px;background:#8B7CF233"></div>
+          <div class="status"><span>9:41</span><span class="sig"><i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i style="height:10px"></i></span></div>
+          <div class="island"><canvas data-hunch="care" data-size="44"></canvas><span>I'm on it</span></div>
+          <div class="bubble">where is my food?? it's been 40 min</div>
+          <div class="say" style="font-size:22px">Sorry, Arjun's stuck at the Domlur signal.<small>New ETA is 9 min. I didn't wait for you to ask.</small></div>
+          <div class="care">
+            <b>₹40 credit added to your wallet</b>
+            <span style="color:var(--ink-2)">Applied automatically on your next order.</span>
+          </div>
+          <div class="chips">
+            <span class="chip"><i style="--c:var(--lavender)"></i>Share live location</span>
+            <span class="chip"><i style="--c:var(--chili)"></i>Cancel &amp; refund</span>
+            <span class="chip"><i style="--c:var(--ink-3)"></i>Talk to a person</span>
+          </div>
+          <div class="composer"><span class="grow">Tell Hunch what's wrong…</span><span class="mic" style="background:var(--lavender);box-shadow:none"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span></div>
+        </div></div>
+        <figcaption><b>Support</b><span>Lavender pool · Hunch: Care · the fix comes before the questions</span></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="band" aria-labelledby="s-motion">
+    <div class="band-head">
+      <div class="eyebrow">Motion</div>
+      <h2 id="s-motion">Everything is born from Hunch</h2>
+      <p class="lede">Hunch thinks out loud in short chips, then the answer grows out of it: scale from Hunch's position, blur 8 px to sharp, rise 16 px. Springs everywhere, so any motion can be interrupted.</p>
+    </div>
+    <div class="demo">
+      <div class="demo-box" aria-live="polite">
+        <canvas data-hunch="idle" data-size="96" id="demo-hunch" data-look="0,.5"></canvas>
+        <div class="chips" id="demo-chips"></div>
+        <div id="demo-out" class="pick"></div>
+        <button class="btn masala" id="demo-go" style="margin-top:auto">Ask: “something cosy, under ₹250”</button>
+      </div>
+      <div class="tokens">
+        <div><code>spring.snappy</code><span>stiffness 420 · damping 32. Taps, chips, toggles.</span></div>
+        <div><code>spring.gentle</code><span>stiffness 200 · damping 28. Sheets and cards settling. The only spring in checkout and support.</span></div>
+        <div><code>spring.bouncy</code><span>stiffness 320 · damping 14. Found it, offer accepted.</span></div>
+        <div><code>dur.micro</code><span>120 ms. Press states.</span></div>
+        <div><code>dur.base</code><span>240 ms. Fades and colour shifts between moods.</span></div>
+        <div><code>dur.emerge</code><span>420 ms. Generated UI arriving.</span></div>
+        <div><code>stagger</code><span>40 ms between chips and carousel plates.</span></div>
+        <div><code>breath</code><span>4 s cycle. Only Hunch and the primary action breathe.</span></div>
+        <div><code>reduced</code><span>Blink and colour stay. Wobble, travel and bounce go. Emergence becomes a 200 ms fade.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="band" aria-labelledby="s-color">
+    <div class="band-head">
+      <div class="eyebrow">Colour</div>
+      <h2 id="s-color">A warm canvas, so the food carries the colour</h2>
+      <p class="lede">Masala belongs to Hunch and the main action. Each flavour owns one part of the journey. Groups are made with soft colour pools and food-tinted shadows, never with borders.</p>
+    </div>
+    <div class="masala-bar">Masala · #FFB547 → #FF6A3D → #E2366E</div>
+    <div class="swatches">
+      <div class="sw" style="--c:var(--saffron)"><div class="orb"></div><b>Saffron</b><span>#FF9F1C · Discovery, the Hunch Pick</span></div>
+      <div class="sw" style="--c:var(--chili)"><div class="orb"></div><b>Chili</b><span>#F2542D · Primary action, cart</span></div>
+      <div class="sw" style="--c:var(--gold)"><div class="orb"></div><b>Gold</b><span>#E9A800 · Offers and savings</span></div>
+      <div class="sw" style="--c:var(--basil)"><div class="orb"></div><b>Basil</b><span>#1F9D55 · Goals, protein, veg</span></div>
+      <div class="sw" style="--c:var(--lagoon)"><div class="orb"></div><b>Lagoon</b><span>#2F7CF0 · Tracking, delivery</span></div>
+      <div class="sw" style="--c:var(--lavender)"><div class="orb"></div><b>Lavender</b><span>#8B7CF2 · Support</span></div>
+      <div class="sw" style="--c:var(--indigo)"><div class="orb"></div><b>Indigo</b><span>#3D3A8C · Night, scheduled</span></div>
+    </div>
+    <div class="base">
+      <div><i style="--c:var(--canvas)"></i>Canvas #FAF9F6</div>
+      <div><i style="--c:var(--surface)"></i>Surface #FFFFFF</div>
+      <div><i style="--c:var(--tint)"></i>Tint #F2EFEA</div>
+      <div><i style="--c:var(--ink-3)"></i>Ink 3 #ABA398</div>
+      <div><i style="--c:var(--ink-2)"></i>Ink 2 #6E665B</div>
+      <div><i style="--c:var(--ink)"></i>Ink #1A1611</div>
+    </div>
+  </section>
+
+  <section class="band" aria-labelledby="s-type">
+    <div class="band-head">
+      <div class="eyebrow">Type</div>
+      <h2 id="s-type">Hunch's voice has its own face</h2>
+    </div>
+    <div class="type">
+      <div class="spec"><span class="eyebrow">Display · Hunch speaking, dish names</span><span class="big" style="font-family:var(--f-display);font-weight:750">Biryani?</span><p>Bricolage Grotesque, 600–750. Warm and a little quirky, so Hunch sounds like a character.</p></div>
+      <div class="spec"><span class="eyebrow">UI · Body</span><span class="big" style="font-family:var(--f-ui);font-weight:600;font-size:44px">Deliver to Home</span><p>Instrument Sans, 400–600. Compact and legible from 12 to 16 px.</p></div>
+      <div class="spec"><span class="eyebrow">Numbers · ₹, minutes, kcal</span><span class="big mono" style="font-weight:600">₹289 · 32m</span><p>Geist Mono, 500. Prices and ETAs line up and read as exact.</p></div>
+      <div class="spec"><span class="eyebrow">Devanagari</span><span class="big" style="font-family:var(--f-hi);font-weight:600;font-size:48px">बारिश और बिरयानी?</span><p>Mukta, 400–600. Sits beside Instrument Sans at the same weight for Hindi replies.</p></div>
+    </div>
+  </section>
+
+  <section class="band" aria-labelledby="s-stages">
+    <div class="band-head">
+      <div class="eyebrow">Stage map</div>
+      <h2 id="s-stages">Who owns which colour, mood and moment</h2>
+    </div>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Stage</th><th>Pool</th><th>Hunch mood</th><th>Signature moment</th></tr></thead>
+        <tbody>
+          <tr><td><b>Onboarding</b></td><td><span class="dot" style="--c:#FF6A3D"></span>Masala</td><td>Idle → Found it</td><td>Hunch tastes you: tap plates as they float by, pick goals and language.</td></tr>
+          <tr><td><b>Now</b></td><td><span class="dot" style="--c:#FFB08A"></span>Time of day</td><td>Idle</td><td>Context chip and one ready Hunch Pick before you type.</td></tr>
+          <tr><td><b>Conversation</b></td><td><span class="dot" style="--c:var(--saffron)"></span>Saffron</td><td>Listening → Thinking → Found it</td><td>Thought chips stream, then the answer grows from the island.</td></tr>
+          <tr><td><b>Restaurant &amp; dish</b></td><td><span class="dot" style="--c:#C9781F"></span>The dish's own colour</td><td>Idle</td><td>Full-bleed photo, plate cut-out, review digest in three phrases.</td></tr>
+          <tr><td><b>Offers</b></td><td><span class="dot" style="--c:var(--gold)"></span>Gold</td><td>Deal</td><td>Interception card with a glint, saving shown in rupees.</td></tr>
+          <tr><td><b>Checkout</b></td><td><span class="dot" style="--c:var(--ink)"></span>Ink</td><td>Trust</td><td>Everything stills. One button. Undo instead of confirm.</td></tr>
+          <tr><td><b>Tracking</b></td><td><span class="dot" style="--c:var(--lagoon)"></span>Lagoon</td><td>On the way</td><td>Hunch leaves the island and rides the route.</td></tr>
+          <tr><td><b>Support</b></td><td><span class="dot" style="--c:var(--lavender)"></span>Lavender</td><td>Care</td><td>The fix is offered before any question is asked.</td></tr>
+          <tr><td><b>Proactive</b></td><td><span class="dot" style="--c:#F07A7A"></span>Dusk</td><td>Peeking</td><td>Hunch peeks from the top edge at your usual time.</td></tr>
+          <tr><td><b>Late night</b></td><td><span class="dot" style="--c:var(--indigo)"></span>Indigo</td><td>Sleepy</td><td>Dimmer canvas, lighter portions suggested.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+const TAU = Math.PI * 2;
+const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const hex = h => [1,3,5].map(i => parseInt(h.slice(i, i + 2), 16));
+const rgba = (c, a = 1) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`;
+const mix = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
+const WHITE = [255, 255, 255];
+
+const MOODS = {
+  idle:      { label: 'Idle',       cols: ['#FFC46B','#FF6A3D','#E2366E'], wob: .045, speed: 1,   aura: .30, eyes: 'open',  note: 'Waiting for you. Breathes slowly, eyes follow your finger.' },
+  listening: { label: 'Listening',  cols: ['#FFD27A','#FF7A3D','#F0457A'], wob: .06,  speed: 1.4, aura: .42, eyes: 'open',  rings: true, look: [0, -.7], note: 'Mic is on. The aura rings move with your voice.' },
+  thinking:  { label: 'Thinking',   cols: ['#FFC46B','#FF6A3D','#E2366E'], wob: .09,  speed: 2.2, aura: .34, eyes: 'scan',  specks: true, cycle: true, note: 'Working. Colour walks through ingredients, eyes scan.' },
+  found:     { label: 'Found it',   cols: ['#FFC46B','#FF6A3D','#E2366E'], wob: .05,  speed: 1.2, aura: .38, eyes: 'happy', pop: true, sparkle: true, note: 'Pick ready. A squash-and-pop bounce and a happy squint.' },
+  deal:      { label: 'Deal',       cols: ['#FFE08A','#F2B400','#C77800'], wob: .05,  speed: 1.2, aura: .40, eyes: 'wink',  glint: true, sparkle: true, pop: true, note: 'Found you a better offer. Turns gold, glints and winks.' },
+  trust:     { label: 'Trust',      cols: ['#544A3E','#2A241D','#15110C'], wob: .012, speed: .5,  aura: .12, eyes: 'open',  rim: '#FFB547', note: 'Checkout. Still, calm and serious about your money.' },
+  track:     { label: 'On the way', cols: ['#9CC8FF','#2F7CF0','#1C4FB0'], wob: .04,  speed: 1.1, aura: .30, eyes: 'open',  specks: true, look: [.7, -.2], note: 'Tracking. Rides the route with your order.' },
+  care:      { label: 'Care',       cols: ['#D7D0FF','#8B7CF2','#5B4BCF'], wob: .03,  speed: .6,  aura: .28, eyes: 'soft',  droop: true, look: [0, .35], note: 'Support. Slower, softer, eyes lowered while it fixes things.' },
+  sleepy:    { label: 'Sleepy',     cols: ['#8E8BE6','#3D3A8C','#1F1D52'], wob: .025, speed: .45, aura: .20, eyes: 'half',  look: [0, .3], note: 'Late night. Heavy-lidded, suggests something light.' },
+};
+const CYCLE = [['#FFC46B','#FF6A3D','#E2366E'],['#C9EE8A','#1F9D55','#0F6B3A'],['#FFE08A','#F2B400','#C77800'],['#FF9E8A','#F2542D','#A81E3D'],['#9CC8FF','#2F7CF0','#1C4FB0']].map(c => c.map(hex));
+Object.values(MOODS).forEach(m => m.rgb = m.cols.map(hex));
+
+const pointer = { x: 0, y: 0, at: -1e9 };
+addEventListener('pointermove', e => { pointer.x = e.clientX; pointer.y = e.clientY; pointer.at = performance.now(); }, { passive: true });
+
+const HUNCHES = [];
+class Hunch {
+  constructor(cv, o = {}) {
+    this.cv = cv; this.ctx = cv.getContext('2d');
+    this.size = o.size || 120; this.follow = !!o.follow; this.baseLook = o.look || [0, 0];
+    const d = Math.min(devicePixelRatio || 1, 2);
+    cv.width = this.size * d; cv.height = this.size * d; cv.style.width = cv.style.height = this.size + 'px'; this.d = d;
+    this.state = o.state || 'idle';
+    const m = MOODS[this.state];
+    this.col = m.rgb.map(c => c.slice()); this.wob = m.wob; this.spd = m.speed; this.aura = m.aura;
+    this.look = [0, 0]; this.t = Math.random() * 20; this.blinkAt = 0; this.nextBlink = performance.now() + 800 + Math.random() * 3000;
+    this.pop = 0; this.popPh = 0; this.visible = true;
+    HUNCHES.push(this);
+  }
+  set(s) {
+    if (!MOODS[s]) return;
+    this.state = s;
+    if (MOODS[s].pop) { this.pop = 1; this.popPh = 0; }
+  }
+  step(dt, now) {
+    const m = MOODS[this.state], k = 1 - Math.exp(-dt * 5);
+    let target = m.rgb;
+    if (m.cycle) target = CYCLE[Math.floor(now / 850) % CYCLE.length];
+    this.col = this.col.map((c, i) => mix(c, target[i], k));
+    this.wob += (m.wob * (REDUCE ? .25 : 1) - this.wob) * k;
+    this.spd += (m.speed - this.spd) * k;
+    this.aura += (m.aura - this.aura) * k;
+    this.t += dt * this.spd;
+    if (this.pop > 0) { this.popPh += dt * 10; this.pop *= Math.exp(-dt * 2.4); if (this.pop < .01) this.pop = 0; }
+    if (now > this.nextBlink) { this.blinkAt = now; this.nextBlink = now + 2600 + Math.random() * 3600; }
+    // where to look
+    let L = m.look || this.baseLook;
+    if (m.eyes === 'scan') L = [Math.sin(this.t * 1.6) * .85, -.1];
+    else if (this.follow && now - pointer.at < 2500) {
+      const r = this.cv.getBoundingClientRect();
+      const dx = pointer.x - (r.left + r.width / 2), dy = pointer.y - (r.top + r.height / 2);
+      const len = Math.hypot(dx, dy) || 1, s = Math.min(1, len / 260);
+      L = [dx / len * s, dy / len * s];
+    } else if (this.follow) L = [Math.sin(this.t * .37) * .5, Math.sin(this.t * .23) * .3];
+    this.look = mix(this.look, L, 1 - Math.exp(-dt * 8));
+  }
+  blob(cx, cy, R, sx, sy) {
+    const c = this.ctx, t = this.t, w = this.wob;
+    c.beginPath();
+    for (let i = 0; i <= 64; i++) {
+      const a = i / 64 * TAU;
+      const r = R * (1 + w * (Math.sin(3 * a + t * 1.3) * .55 + Math.sin(5 * a - t * 1.7) * .3 + Math.sin(2 * a + t * .8) * .45));
+      const x = cx + Math.cos(a) * r * sx, y = cy + Math.sin(a) * r * sy;
+      i ? c.lineTo(x, y) : c.moveTo(x, y);
+    }
+    c.closePath();
+  }
+  draw(now) {
+    const c = this.ctx, S = this.size, m = MOODS[this.state], t = this.t;
+    c.setTransform(this.d, 0, 0, this.d, 0, 0); c.clearRect(0, 0, S, S);
+    const [c1, c2, c3] = this.col;
+    const R = S * .27;
+    const breath = 1 + Math.sin(t * 1.55) * .025;
+    let lift = 0, sx = breath, sy = breath;
+    if (this.pop && !REDUCE) { lift = Math.abs(Math.sin(this.popPh)) * R * .45 * this.pop; const q = Math.cos(this.popPh * 2) * .1 * this.pop; sx *= 1 + q; sy *= 1 - q; }
+    if (m.droop) sy *= .95;
+    const cx = S / 2, cy = S / 2 + (m.droop ? R * .05 : 0) - lift;
+
+    // ground shadow
+    c.fillStyle = 'rgba(26,22,17,.09)';
+    c.beginPath(); c.ellipse(S / 2, S / 2 + R * 1.3, R * .8 * (1 - lift / (R * 1.4)), R * .11, 0, 0, TAU); c.fill();
+
+    // aura
+    const ag = c.createRadialGradient(cx, cy, R * .5, cx, cy, R * 1.85);
+    ag.addColorStop(0, rgba(c2, this.aura * (.85 + .15 * Math.sin(t * 1.55)))); ag.addColorStop(1, rgba(c2, 0));
+    c.fillStyle = ag; c.beginPath(); c.arc(cx, cy, R * 1.85, 0, TAU); c.fill();
+
+    // listening rings
+    if (m.rings) {
+      const lvl = .5 + .5 * Math.abs(Math.sin(t * 5.3) * Math.sin(t * 2.1));
+      for (let i = 0; i < 3; i++) {
+        const p = (t * .55 + i / 3) % 1;
+        c.strokeStyle = rgba(c2, (1 - p) * .45 * lvl); c.lineWidth = R * .05;
+        c.beginPath(); c.arc(cx, cy, R * (1.08 + p * .75 * lvl), 0, TAU); c.stroke();
+      }
+    }
+
+    // body
+    this.blob(cx, cy, R, sx, sy);
+    const bg = c.createRadialGradient(cx - R * .45, cy - R * .55, R * .05, cx + R * .1, cy + R * .1, R * 1.35);
+    bg.addColorStop(0, rgba(mix(c1, WHITE, .25))); bg.addColorStop(.45, rgba(c2)); bg.addColorStop(1, rgba(c3));
+    c.fillStyle = bg; c.fill();
+
+    c.save(); this.blob(cx, cy, R, sx, sy); c.clip();
+    // swirl: lighter drifting core and a darker eddy
+    const swx = cx + Math.cos(t * .7) * R * .35, swy = cy + Math.sin(t * .9) * R * .3;
+    let g = c.createRadialGradient(swx, swy, 0, swx, swy, R * .75);
+    g.addColorStop(0, rgba(mix(c1, WHITE, .4), .55)); g.addColorStop(1, rgba(c1, 0));
+    c.fillStyle = g; c.fillRect(cx - R * 2, cy - R * 2, R * 4, R * 4);
+    const ex2 = cx + Math.cos(t * .5 + 2.4) * R * .5, ey2 = cy + Math.sin(t * .6 + 1.2) * R * .45;
+    g = c.createRadialGradient(ex2, ey2, 0, ex2, ey2, R * .6);
+    g.addColorStop(0, rgba(c3, .55)); g.addColorStop(1, rgba(c3, 0));
+    c.fillStyle = g; c.fillRect(cx - R * 2, cy - R * 2, R * 4, R * 4);
+    // deal glint
+    if (m.glint) {
+      const p = ((now / 2400) % 1) * 1.8 - .4;
+      c.save(); c.translate(cx, cy); c.rotate(-.6);
+      const gx = (p - .5) * R * 4;
+      const gg = c.createLinearGradient(gx - R * .3, 0, gx + R * .3, 0);
+      gg.addColorStop(0, 'rgba(255,255,255,0)'); gg.addColorStop(.5, 'rgba(255,255,255,.6)'); gg.addColorStop(1, 'rgba(255,255,255,0)');
+      c.fillStyle = gg; c.fillRect(gx - R * .3, -R * 2, R * .6, R * 4); c.restore();
+    }
+    c.restore();
+
+    if (m.rim) { this.blob(cx, cy, R, sx, sy); c.strokeStyle = rgba(hex(m.rim), .9); c.lineWidth = Math.max(1.5, R * .06); c.stroke(); }
+
+    // glass highlight
+    c.save(); c.translate(cx - R * .4, cy - R * .5); c.rotate(-.55);
+    g = c.createRadialGradient(0, 0, 0, 0, 0, R * .32);
+    g.addColorStop(0, 'rgba(255,255,255,.75)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+    c.fillStyle = g; c.beginPath(); c.ellipse(0, 0, R * .32, R * .16, 0, 0, TAU); c.fill(); c.restore();
+
+    this.eyes(cx, cy, R, m.eyes, now);
+
+    // orbiting specks
+    if (m.specks) for (let i = 0; i < 3; i++) {
+      const a = t * 1.6 + i * TAU / 3;
+      c.fillStyle = rgba(mix(c1, WHITE, .2), .9);
+      c.beginPath(); c.arc(cx + Math.cos(a) * R * 1.38, cy + Math.sin(a) * R * .55 * 1.38 * .9, R * (.05 + .02 * Math.sin(a)), 0, TAU); c.fill();
+    }
+    // sparkles
+    if (m.sparkle) for (let i = 0; i < 4; i++) {
+      const a = -2.2 + i * 1.25, ph = Math.sin(now / 380 + i * 1.7);
+      if (ph < 0) continue;
+      this.star(cx + Math.cos(a) * R * 1.45, cy + Math.sin(a) * R * 1.35, R * .14 * ph, rgba(mix(c1, WHITE, .3), ph));
+    }
+  }
+  eyes(cx, cy, R, mode, now) {
+    const c = this.ctx;
+    const ex = R * .27, ew = R * .15, eh = R * .32;
+    const lx = this.look[0] * R * .15, ly = this.look[1] * R * .12;
+    let bl = 0; const bt = now - this.blinkAt;
+    if (bt < 170) bl = 1 - Math.abs(bt / 85 - 1);
+    c.save();
+    c.fillStyle = '#fff'; c.strokeStyle = '#fff'; c.lineCap = 'round';
+    c.shadowColor = 'rgba(255,255,255,.9)'; c.shadowBlur = R * .18;
+    for (const side of [-1, 1]) {
+      const x = cx + side * ex + lx, y = cy - R * .04 + ly;
+      const md = mode === 'wink' ? (side === 1 ? 'happy' : 'open') : mode;
+      if (md === 'happy') {
+        c.lineWidth = ew * .85;
+        c.beginPath(); c.arc(x, y + eh * .22, ew * .95, Math.PI * 1.12, Math.PI * 1.88); c.stroke();
+        continue;
+      }
+      let h = eh, yy = y;
+      if (md === 'soft') { h *= .62; yy += eh * .16; }
+      if (md === 'half') { h *= .36; yy += eh * .24; }
+      h = Math.max(h * (1 - bl * .92), ew * .35);
+      c.beginPath(); c.roundRect(x - ew / 2, yy - h / 2, ew, h, Math.min(ew, h) / 2); c.fill();
+    }
+    c.restore();
+  }
+  star(x, y, r, col) {
+    const c = this.ctx; c.fillStyle = col; c.beginPath();
+    for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, rr = i % 2 ? r * .3 : r; c[i ? 'lineTo' : 'moveTo'](x + Math.cos(a) * rr, y + Math.sin(a) * rr); }
+    c.closePath(); c.fill();
+  }
+}
+
+// ---------- generated plates (placeholders for real photography) ----------
+const RECIPES = {
+  biryani: { base: ['#F0B04A','#C9781F'], layers: [['grain','#FFF3D6',300,.05],['grain','#F59A1E',130,.05],['blob','#7A3B1A',9,.16],['blob','#9B4E22',7,.12],['ring','#F1D9B8',6,.1],['leaf','#3E8E3A',18,.07]] },
+  bowl:    { base: ['#EFE3C8','#D9C49A'], layers: [['grain','#F7EFDB',180,.045],['cube','#C8742E',12,.14],['leaf','#5FAE47',26,.11],['dot','#E2B85C',22,.06],['cube','#B9D98C',8,.09],['ring','#9E3A6E',5,.1],['dot','#2E2A25',26,.02]] },
+  salad:   { base: ['#8DC66A','#3F8A35'], layers: [['leaf','#B6E08A',36,.16],['leaf','#2F7A2C',26,.14],['dot','#E5453A',10,.11],['cube','#FFF8EE',10,.09],['dot','#2A2420',8,.05]] },
+  pizza:   { base: ['#F1C063','#D38E2F'], layers: [['dot','#FFE7A3',40,.09],['pep','#B3301E',13,.17],['leaf','#3E8E3A',8,.09]] },
+  tikka:   { base: ['#F3D9A6','#E2B66A'], layers: [['cube','#EE7A2E',11,.17],['ring','#7FB04A',6,.12],['ring','#B03A5B',6,.11],['dot','#2A2420',22,.025]] },
+  coffee:  { base: ['#C79A6B','#8A5A36'], layers: [['swirl','#F3E6D6',4,.5],['dot','#FFFFFF',8,.05]] },
+  dal:     { base: ['#8A4528','#4A2214'], layers: [['swirl','#FFF1DC',3,.5],['dot','#6A2E18',30,.06],['leaf','#3E8E3A',12,.07]] },
+};
+function rng(seed) { let s = seed % 2147483647 || 1; return () => (s = s * 16807 % 2147483647) / 2147483647; }
+function drawPlate(cv, key, size) {
+  const rec = RECIPES[key]; if (!rec) return;
+  const d = Math.min(devicePixelRatio || 1, 2);
+  cv.width = cv.height = size * d; cv.style.width = cv.style.height = size + 'px';
+  const c = cv.getContext('2d'); c.setTransform(d, 0, 0, d, 0, 0);
+  const cx = size / 2, cy = size / 2, P = size / 2 - 1, r = P * .78;
+  let g = c.createRadialGradient(cx - P * .3, cy - P * .3, P * .2, cx, cy, P);
+  g.addColorStop(0, '#FFFFFF'); g.addColorStop(.8, '#F6F3EE'); g.addColorStop(1, '#E4DED5');
+  c.fillStyle = g; c.beginPath(); c.arc(cx, cy, P, 0, TAU); c.fill();
+  c.fillStyle = 'rgba(26,22,17,.07)'; c.beginPath(); c.arc(cx + 1, cy + 2, r + 2, 0, TAU); c.fill();
+  const [b1, b2] = rec.base.map(hex);
+  g = c.createRadialGradient(cx - r * .3, cy - r * .3, r * .1, cx, cy, r);
+  g.addColorStop(0, rgba(mix(b1, WHITE, .1))); g.addColorStop(1, rgba(b2));
+  c.save(); c.beginPath(); c.arc(cx, cy, r, 0, TAU); c.fillStyle = g; c.fill(); c.clip();
+  const rand = rng([...key].reduce((a, ch) => a * 31 + ch.charCodeAt(0), 7));
+  for (const [shape, col, n, sz] of rec.layers) {
+    const C = hex(col);
+    for (let i = 0; i < n; i++) {
+      const a = rand() * TAU, rr = Math.sqrt(rand()) * r * .92, x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr;
+      const s = sz * r * (.75 + rand() * .5), rot = rand() * TAU;
+      c.save(); c.translate(x, y); c.rotate(rot);
+      if (shape === 'grain') { c.fillStyle = rgba(C, .95); c.beginPath(); c.ellipse(0, 0, s * .5, s * .17, 0, 0, TAU); c.fill(); }
+      else if (shape === 'leaf') { c.fillStyle = rgba(C); c.beginPath(); c.ellipse(0, 0, s * .5, s * .22, 0, 0, TAU); c.fill(); }
+      else if (shape === 'dot') { c.fillStyle = rgba(C); c.beginPath(); c.arc(0, 0, s * .5, 0, TAU); c.fill(); }
+      else if (shape === 'cube') { const q = c.createLinearGradient(-s / 2, -s / 2, s / 2, s / 2); q.addColorStop(0, rgba(mix(C, WHITE, .25))); q.addColorStop(1, rgba(mix(C, [40, 20, 10], .35))); c.fillStyle = q; c.beginPath(); c.roundRect(-s / 2, -s / 2, s, s, s * .25); c.fill(); }
+      else if (shape === 'blob') { const q = c.createRadialGradient(-s * .15, -s * .15, 0, 0, 0, s * .6); q.addColorStop(0, rgba(mix(C, WHITE, .2))); q.addColorStop(1, rgba(mix(C, [30, 15, 5], .4))); c.fillStyle = q; c.beginPath(); c.ellipse(0, 0, s * .55, s * .42, 0, 0, TAU); c.fill(); }
+      else if (shape === 'ring') { c.strokeStyle = rgba(C, .9); c.lineWidth = s * .16; c.beginPath(); c.arc(0, 0, s * .45, 0, TAU * .8); c.stroke(); }
+      else if (shape === 'pep') { c.fillStyle = rgba(C); c.beginPath(); c.arc(0, 0, s * .5, 0, TAU); c.fill(); c.fillStyle = rgba(mix(C, [40, 10, 5], .4)); for (let k = 0; k < 4; k++) { c.beginPath(); c.arc((rand() - .5) * s * .5, (rand() - .5) * s * .5, s * .06, 0, TAU); c.fill(); } }
+      else if (shape === 'swirl') { c.strokeStyle = rgba(C, .85); c.lineWidth = r * .07; c.lineCap = 'round'; c.beginPath(); c.arc(0, 0, s * .5, 0, TAU * .55); c.stroke(); }
+      c.restore();
+    }
+  }
+  g = c.createRadialGradient(cx - r * .45, cy - r * .5, 0, cx - r * .45, cy - r * .5, r * .9);
+  g.addColorStop(0, 'rgba(255,255,255,.28)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  c.fillStyle = g; c.fillRect(0, 0, size, size);
+  c.restore();
+}
+document.querySelectorAll('canvas[data-plate]').forEach(cv => drawPlate(cv, cv.dataset.plate, +cv.dataset.size));
+
+// ---------- mount Hunches ----------
+const hero = new Hunch(document.getElementById('hero'), { size: Math.min(380, Math.max(260, document.getElementById('stage').clientWidth * .8)), follow: true });
+const byEl = new Map();
+document.querySelectorAll('canvas[data-hunch]').forEach(cv => {
+  const look = cv.dataset.look ? cv.dataset.look.split(',').map(Number) : [0, 0];
+  byEl.set(cv, new Hunch(cv, { size: +cv.dataset.size, state: cv.dataset.hunch, look }));
+});
+
+// only animate what is on screen
+const io = new IntersectionObserver(es => es.forEach(e => { const h = HUNCHES.find(h => h.cv === e.target); if (h) h.visible = e.isIntersecting; }));
+HUNCHES.forEach(h => io.observe(h.cv));
+
+// ---------- hero mood picker ----------
+const moodsEl = document.getElementById('moods'), stage = document.getElementById('stage');
+const POOLS = { idle: '#FF9F1C33', listening: '#FF6A3D33', thinking: '#1F9D5526', found: '#FF6A3D33', deal: '#E9A80040', trust: '#1A16111a', track: '#2F7CF033', care: '#8B7CF233', sleepy: '#3D3A8C33' };
+let auto = !REDUCE, autoIdx = 0;
+function pick(s, fromUser) {
+  hero.set(s);
+  if (fromUser) auto = false;
+  moodsEl.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.s === s));
+  document.getElementById('mood-name').textContent = MOODS[s].label;
+  document.getElementById('mood-note').textContent = MOODS[s].note;
+  stage.querySelector('.pool').style.setProperty('--pool', POOLS[s]);
+}
+Object.entries(MOODS).forEach(([k, m]) => {
+  const b = document.createElement('button');
+  b.className = 'mood'; b.dataset.s = k; b.style.setProperty('--c', m.cols[1]);
+  b.innerHTML = `<i></i>${m.label}`; b.onclick = () => pick(k, true);
+  moodsEl.appendChild(b);
+});
+pick('idle');
+const order = ['idle', 'listening', 'thinking', 'found', 'deal', 'track', 'care', 'trust', 'sleepy'];
+setInterval(() => { if (auto) { autoIdx = (autoIdx + 1) % order.length; pick(order[autoIdx]); } }, 3400);
+document.getElementById('hero').addEventListener('pointerdown', () => { auto = false; hero.set('found'); pick('found', true); });
+
+// ---------- tracking rider ----------
+const rider = byEl.get(document.getElementById('rider'));
+const path = document.getElementById('route-path'), route = document.getElementById('route');
+const plen = path.getTotalLength();
+function placeRider(now) {
+  const p = REDUCE ? .55 : .12 + .74 * (.5 - .5 * Math.cos(now / 9000 * TAU));
+  const pt = path.getPointAtLength(p * plen);
+  const sxr = route.clientWidth / 268, syr = route.clientHeight / 170;
+  rider.cv.style.transform = `translate(${pt.x * sxr - rider.size / 2}px, ${pt.y * syr - rider.size / 2 - 8}px)`;
+  document.getElementById('eta').textContent = Math.max(1, Math.round((1 - p) * 14));
+}
+
+// ---------- motion demo ----------
+const dh = byEl.get(document.getElementById('demo-hunch'));
+const dChips = document.getElementById('demo-chips'), dOut = document.getElementById('demo-out'), dGo = document.getElementById('demo-go');
+let busy = false;
+dGo.onclick = () => {
+  if (busy) return; busy = true;
+  dChips.innerHTML = ''; dOut.innerHTML = ''; dh.set('thinking');
+  const chips = [['#2F7CF0', '22°C, drizzling'], ['#FF9F1C', 'Cosy → warm, creamy'], ['#1F9D55', 'Under ₹250'], ['#8B7CF2', 'You rated Punjabi Angithi 5★']];
+  chips.forEach(([c, txt], i) => setTimeout(() => {
+    const s = document.createElement('span'); s.className = 'chip emerge'; s.innerHTML = `<i style="--c:${c}"></i>${txt}`; dChips.appendChild(s);
+  }, 260 + i * 330));
+  setTimeout(() => {
+    dh.set('found');
+    dOut.innerHTML = `<div class="pick emerge"><canvas class="plate" data-plate="dal" data-size="150" style="filter:drop-shadow(0 18px 20px rgba(122,59,34,.35))"></canvas>
+      <div class="row" style="justify-content:center"><span class="vm" style="--c:#1F9D55"></span><span class="dish">Dal Makhani + 2 Butter Naan</span></div>
+      <span class="meta">₹238 · 28 min · Punjabi Angithi · 4.5★</span>
+      <span class="chip" style="margin-top:4px;background:#FFF3CF"><i style="--c:#E9A800"></i>Free delivery tonight · saves ₹35</span></div>`;
+    const cv = dOut.querySelector('canvas'); drawPlate(cv, 'dal', 150);
+    dGo.textContent = 'Ask again';
+    busy = false;
+  }, 260 + chips.length * 330 + 500);
+};
+
+// ---------- loop ----------
+let last = performance.now();
+function loop(now) {
+  const dt = Math.min(.05, (now - last) / 1000); last = now;
+  for (const h of HUNCHES) if (h.visible) { h.step(dt, now); h.draw(now); }
+  placeRider(now);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+})();
+</script>
