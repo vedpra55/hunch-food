@@ -16,10 +16,10 @@ const MAX_GROUPS = 2
 const MIN_ITEMS = 3
 const MAX_ITEMS = 6
 /** Variety: a row never leans on one kitchen. */
-const MAX_PER_RESTAURANT = 2
+export const MAX_PER_RESTAURANT = 2
 
 /** Everything Home needs to decide, computed once per render. */
-interface Signals {
+export interface Signals {
   user: UserProfile
   ctx: Context
   meal: Meal
@@ -52,24 +52,8 @@ export function buildHome(user: UserProfile, ctx: Context, cat: Catalogue = DEFA
     }
   }
 
-  const meal = mealAt(ctx.now)
-  const s: Signals = {
-    user,
-    ctx,
-    meal,
-    stage: user.orderCount === 0 ? 'first' : meal,
-    goal: activeGoal(user, ctx),
-    vegDay: !!vegDayToday(user, ctx),
-    fastDay: fastingDay(user, ctx),
-    inferredVeg: !!inferredVegDayToday(user, ctx),
-    rainy: ctx.weather.kind === 'rain',
-    hot: ctx.weather.kind === 'hot' || ctx.weather.tempC >= 33,
-    cold: ctx.weather.kind === 'cold' || ctx.weather.tempC <= 15,
-    usuals: new Map(user.usuals.map(u => [u.dishId, u])),
-  }
-
-  // Layer 1: rules filter. Nothing below can bring a filtered dish back.
-  const candidates = cat.menu.filter(d => allowed(d, user, ctx)).map(d => suggest(d, cat.restaurants[d.restaurantId], s))
+  const s = signals(user, ctx)
+  const candidates = allowedSuggestions(s, cat)
 
   const usual = pickUsual(candidates, s)
   const groups = pickGroups(candidates, s, usual)
@@ -83,6 +67,29 @@ export function buildHome(user: UserProfile, ctx: Context, cat: Catalogue = DEFA
     groups,
     starters: s.fastDay ? RULE_STARTERS.fasting : s.vegDay ? RULE_STARTERS.vegDay : STARTERS[s.stage],
   }
+}
+
+export function signals(user: UserProfile, ctx: Context): Signals {
+  const meal = mealAt(ctx.now)
+  return {
+    user,
+    ctx,
+    meal,
+    stage: user.orderCount === 0 ? 'first' : meal,
+    goal: activeGoal(user, ctx),
+    vegDay: !!vegDayToday(user, ctx),
+    fastDay: fastingDay(user, ctx),
+    inferredVeg: !!inferredVegDayToday(user, ctx),
+    rainy: ctx.weather.kind === 'rain',
+    hot: ctx.weather.kind === 'hot' || ctx.weather.tempC >= 33,
+    cold: ctx.weather.kind === 'cold' || ctx.weather.tempC <= 15,
+    usuals: new Map(user.usuals.map(u => [u.dishId, u])),
+  }
+}
+
+/** Layer 1: rules filter. Nothing downstream can bring a filtered dish back. */
+export function allowedSuggestions(s: Signals, cat: Catalogue = DEFAULT_CATALOGUE): Suggestion[] {
+  return cat.menu.filter(d => allowed(d, s.user, s.ctx)).map(d => suggest(d, cat.restaurants[d.restaurantId], s))
 }
 
 // ---------- scoring ----------
@@ -209,9 +216,9 @@ interface GroupDef {
   ruleDriven?: boolean
 }
 
-const has = (c: Suggestion, t: Dish['traits'][number]) => c.dish.traits.includes(t)
+export const has = (c: Suggestion, t: Dish['traits'][number]) => c.dish.traits.includes(t)
 /** Rows of meals don't mix in desserts and drinks. */
-const isMain = (c: Suggestion) => !has(c, 'sweet') && !has(c, 'drink')
+export const isMain = (c: Suggestion) => !has(c, 'sweet') && !has(c, 'drink')
 const popularity = (c: Suggestion) => c.restaurant.rating * Math.log10(c.restaurant.ratingCount)
 
 function groupDefs(s: Signals): GroupDef[] {

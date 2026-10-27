@@ -77,3 +77,55 @@ export const GROUP_TITLES = {
 } as const
 
 export const wordCount = (s: string) => s.trim().split(/\s+/).length
+
+/** ₹1,121 — Indian grouping, no decimals */
+export const money = (n: number) => `₹${Math.round(n).toLocaleString('en-IN')}`
+
+/** Conversation replies. Same rules: ≤ 14 words, name the restaurant, exact numbers. */
+export const CHAT = {
+  results: {
+    budget: (n: number, b: number, place: string) => `${n} good options under ${money(b)}. ${place} is my pick.`,
+    protein: (n: number, dish: string, g: number) => `${n} high-protein picks. ${dish} has ${g} g.`,
+    light: (n: number, place: string) => `${n} light options. ${place} is my pick.`,
+    usual: (place: string) => `Your usual from ${place}? Or one of these.`,
+    generic: (n: number, place: string) => `Found ${n}. ${place} is my pick.`,
+    none: (budget?: number) => (budget ? `Nothing open under ${money(budget)}. Try a little more?` : `Nothing open fits that right now. Try something close?`),
+  },
+  plan: {
+    ready: (people: number, place: string, total: number, each: number) => `Dinner for ${people} from ${place}: ${money(total)}, ${money(each)} each.`,
+    none: (people: number, budget: number, needed: number) => `Can't fit ${people} under ${money(budget)} tonight. ${money(needed)} works.`,
+  },
+  status: {
+    searching: (kitchens: number) => `Checking ${kitchens} kitchens…`,
+    planning: (people: number) => `Planning for ${people}…`,
+    placing: 'Placing your order…',
+    listening: 'Listening…',
+    onTheWay: (eta: number) => `On the way · ${eta} min`,
+  },
+  checkout: {
+    title: (place: string) => `Placing your order at ${place}`,
+    titleMany: (n: number) => `Placing your order from ${n} kitchens`,
+  },
+  placed: (place: string, eta: number) => `Done. ${place} is cooking. Here in ${eta} min.`,
+  placedMany: (n: number, eta: number) => `Done. ${n === 2 ? 'Both kitchens are' : `All ${n} kitchens are`} cooking. Here in ${eta} min.`,
+  notNow: () => `No problem. It's in your cart when you're ready.`,
+  ask: {
+    remembered: (day: string) => `Got it. ${day}s are veg from now on.`,
+    declined: () => `Okay. I won't ask again.`,
+  },
+  ruleOff: (label: string) => `${label} off for today.`,
+  notForMe: {
+    'too-spicy': () => `Noted. Milder picks from now on.`,
+    'too-pricey': () => `Noted. I'll keep it cheaper.`,
+    'not-this-place': (place: string) => `Noted. I'll skip ${place}.`,
+    'not-today': () => `Noted. Not today.`,
+  },
+  track: (eta: number, rider: string) => `${rider} is ${eta} min away.`,
+  support: () => `I'm on it. What went wrong?`,
+  change: () => `Tell me what to change.`,
+  /** What the simulated mic "hears" */
+  heard: { dinner: 'Something warm, not too heavy', default: 'Something quick under ₹250' },
+} as const
+
+export const ADDRESS = 'Home · 12th Main, Indiranagar'
+export const PAYMENT = 'UPI · GPay ••4821'
