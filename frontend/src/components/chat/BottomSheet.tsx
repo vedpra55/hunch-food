@@ -29,7 +29,7 @@ export function BottomSheet({ open, title, note, onClose, children }: { open: bo
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={spring.gentle}
-            className="fixed inset-x-0 bottom-0 z-50 mx-auto flex max-h-[90dvh] w-full max-w-[600px] flex-col gap-4 overflow-y-auto rounded-t-[28px] bg-white px-5 pb-[max(24px,env(safe-area-inset-bottom))] pt-3 shadow-e3 [&>*]:shrink-0"
+            className="fixed inset-x-0 bottom-0 z-50 mx-auto flex max-h-[90dvh] w-full max-w-[420px] flex-col gap-4 overflow-y-auto rounded-t-[28px] bg-white px-5 pb-[max(24px,env(safe-area-inset-bottom))] pt-3 shadow-e3 [&>*]:shrink-0"
           >
             <span className="mx-auto h-1 w-10 rounded-full bg-graphite-200" aria-hidden />
             <div className="grid gap-1">

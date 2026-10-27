@@ -1,8 +1,10 @@
 import { AnimatePresence } from 'motion/react'
 import { useEffect, useRef } from 'react'
 import { useConversation, type Msg } from '../chat/useConversation'
-import { Emerge, HunchSays, Typing, UserSays } from '../components/chat/Bubbles'
-import { CartPill, CheckoutCard, PlanCard, ReplyCard, TodayCard, TrackingCard } from '../components/chat/Cards'
+import { Emerge, Turn, Typing, UserSays } from '../components/chat/Bubbles'
+import { CartPill, CheckoutCard, PlanCard, ReplyCard, TrackingCard } from '../components/chat/Cards'
+import { TodayCard } from '../components/chat/TodayCard'
+import { skyFor } from '../design/sky'
 import { DishSheet } from '../components/chat/DishSheet'
 import { AddressSheet } from '../components/chat/AddressSheet'
 import { AddRow, OptionsSheet } from '../components/chat/BottomSheet'
@@ -34,6 +36,8 @@ export function Home() {
   const talked = state.thread.some(m => m.type === 'user')
   const address = findAddress(state.addresses, state.addressId)
   const payment = paymentById(state.paymentId)
+  // Only the newest thing Hunch said breathes.
+  const lastVoice = [...state.thread].reverse().find(m => (m.type === 'hunch' || m.type === 'results' || m.type === 'plan' || m.type === 'tracking') && 'text' in m && m.text)?.id
   const orderActions = { onAskCancel: api.askCancel, onCancel: api.cancel, onRate: api.rate }
 
   // Follow the conversation, but leave the opening card where it is.
@@ -48,6 +52,8 @@ export function Home() {
           <Emerge key={m.id}>
             <TodayCard
               home={home}
+              sky={skyFor(state.ctx.now, state.ctx.weather, state.user.useWeather !== false)}
+              skyMode={state.sky}
               order={home.tracking ? state.orders.live : undefined}
               orderActions={orderActions}
               onOpen={api.openSheet}
@@ -69,18 +75,18 @@ export function Home() {
       case 'user':
         return <UserSays key={m.id}>{m.text}</UserSays>
       case 'hunch':
-        return <HunchSays key={m.id}>{m.text}</HunchSays>
+        return <Turn key={m.id} text={m.text} live={m.id === lastVoice} />
       case 'results':
         return (
-          <Emerge key={m.id}>
-            <ReplyCard text={m.text} items={m.items} refine={m.refine} onOpen={api.openSheet} onRefine={p => api.refine(m.id, p)} />
-          </Emerge>
+          <Turn key={m.id} text={m.text} live={m.id === lastVoice}>
+            <ReplyCard items={m.items} refine={m.refine} onOpen={api.openSheet} onRefine={p => api.refine(m.id, p)} />
+          </Turn>
         )
       case 'plan':
         return (
-          <Emerge key={m.id}>
-            <PlanCard text={m.text} plan={m.plan} ordered={m.ordered} onOrder={() => api.orderPlan(m.id)} onChange={api.changePlan} />
-          </Emerge>
+          <Turn key={m.id} text={m.text} live={m.id === lastVoice}>
+            <PlanCard plan={m.plan} ordered={m.ordered} onOrder={() => api.orderPlan(m.id)} onChange={api.changePlan} />
+          </Turn>
         )
       case 'checkout':
         return (
@@ -105,12 +111,14 @@ export function Home() {
             />
           </Emerge>
         )
-      case 'tracking':
+      case 'tracking': {
+        const o = state.orders[m.orderId]
         return (
-          <Emerge key={m.id}>
-            <TrackingCard text={m.text} order={state.orders[m.orderId]} actions={orderActions} />
-          </Emerge>
+          <Turn key={m.id} text={o.status === 'cancelled' ? undefined : m.text} live={m.id === lastVoice}>
+            <TrackingCard order={o} actions={orderActions} />
+          </Turn>
         )
+      }
     }
   }
 
@@ -118,7 +126,7 @@ export function Home() {
     <>
       <AppShell
         // Until the conversation starts, the Today card sits in the middle of the screen.
-        className={cn('gap-4', !talked && 'justify-center pb-16')}
+        className={cn('gap-6', !talked && 'justify-center pb-16')}
         top={<TopBar mood={api.mood} status={api.status} working={!!state.working} initial={state.user.firstName[0]} onProfile={api.openProfile} />}
         bottom={
           <div className="grid gap-2.5">

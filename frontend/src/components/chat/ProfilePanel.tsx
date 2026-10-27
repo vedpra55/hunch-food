@@ -53,8 +53,8 @@ export function ProfilePanel({ api }: { api: ConversationApi }) {
           transition={spring.gentle}
           className="fixed inset-0 z-[35] overflow-y-auto bg-graphite-25"
         >
-          <div className="mx-auto grid w-full max-w-[600px] gap-7 px-4 pb-16 sm:px-6">
-            <header className="sticky top-0 z-10 -mx-4 flex items-center gap-3 bg-gradient-to-b from-graphite-25 from-75% to-transparent px-4 pb-4 pt-[max(14px,env(safe-area-inset-top))] sm:-mx-6 sm:px-6">
+          <div className="mx-auto grid w-full max-w-[420px] gap-7 px-4 pb-16">
+            <header className="sticky top-0 z-10 -mx-4 flex items-center gap-3 bg-gradient-to-b from-graphite-25 from-75% to-transparent px-4 pb-4 pt-[max(14px,env(safe-area-inset-top))]">
               <IconButton aria-label="Back to Hunch" variant="ghost" size="sm" className="bg-white shadow-e1" icon={<ArrowLeftIcon size={18} />} onClick={closeProfile} />
             </header>
             <Body api={api} />

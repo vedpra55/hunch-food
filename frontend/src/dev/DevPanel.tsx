@@ -341,6 +341,7 @@ export function DevPanel({ api }: { api: ConversationApi }) {
             <Block title="Simulate">
               <Toggle label={`Fast clock · 1 min = ${FAST_MINUTE_MS / 1000} s`} on={state.fastClock} onChange={v => api.setDev({ fastClock: v })} />
               <Toggle label="Next payment fails" on={state.failNextPayment} onChange={v => api.setDev({ failNextPayment: v })} />
+              <Toggle label="Today card: colour moment (off: tint)" on={state.sky === 'moment'} onChange={v => api.setDev({ sky: v ? 'moment' : 'tint' })} />
             </Block>
 
             <button type="button" onClick={() => api.reset(state.scenarioId)} className="h-9 rounded-full bg-graphite-50 text-[13px] font-medium hover:bg-graphite-100">

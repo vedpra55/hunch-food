@@ -5,7 +5,7 @@
  * Two colour families only (Indigo + Graphite). Tailwind's default palette,
  * radii and shadows are cleared so nothing else can sneak in.
  */
-@theme {
+@theme static {
   --color-*: initial;
   --color-white: #ffffff;
   --color-black: #000000;
@@ -98,6 +98,25 @@
 
 /* The three allowed gradients */
 /* Indigo 50 fading out. Sits on white surfaces or the #FAFAFA canvas alike. */
+/* Today card weather (TodayCard.tsx). Outside @theme so they're always emitted. */
+@keyframes rain-fall {
+  from { transform: translateY(-30px) rotate(12deg); opacity: 0; }
+  15% { opacity: 1; }
+  to { transform: translateY(220px) rotate(12deg); opacity: 0; }
+}
+@keyframes twinkle {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 1; }
+}
+@keyframes drift {
+  from { transform: translateX(-12px); }
+  to { transform: translateX(12px); }
+}
+@keyframes shimmer-heat {
+  0%, 100% { opacity: 0.35; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.06); }
+}
+
 @utility bg-wash {
   background-image: radial-gradient(120% 80% at 50% 0%, var(--color-indigo-50) 0%, rgb(242 245 255 / 0) 62%);
 }

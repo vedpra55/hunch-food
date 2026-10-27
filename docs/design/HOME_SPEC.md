@@ -304,3 +304,24 @@ From the address sheet or Profile. `Use where I am` · Area chips · Flat, build
 - **Arrives** as a notification: "Rain from 7 pm. Chicken Dum Biryani by 8:30 pm?" It leaves on its own after 5 s.
 - **Today card**: "Rain from 7 pm. Dinner here by 8:30 pm, before the rush?" (no forecast: "Dinner around 8:30 pm, like usual? I can line it up."), the usual, `Schedule for 8:30 pm` · `Order now` · `Not tonight` ("Okay. I'll stay quiet tonight.").
 - **Scheduled**: checkout says "Dinner from Nawab's Kitchen, at 8:30 pm", no deal switching. Tracking shows "Arriving at **8:30 pm**", "Scheduled. Nawab's Kitchen starts at 7:55 pm", top bar "Scheduled · 8:30 pm"; cancel is free until the kitchen starts.
+
+---
+
+## 8. Voice and things, the Today sky
+
+### Hunch's voice is not a card
+- Every Hunch turn is **voice → component**. The voice is 20/28 medium text on the page with Hunch's mark (a small orb; only the newest one breathes). It types in word by word.
+- The component (dish row, plan, checkout, tracking) arrives as a white card once the words have landed. No message text inside components.
+- The user stays as an ink bubble on the right. "Thinking" is the mark plus three dots, no card.
+
+### Today card: a moment
+- **Sky band** (top): context, today's rules as tappable stamps, and Hunch's line at 26/32 on the sky of right now, in Indigo and Graphite only:
+  - morning and day: pale indigo, a soft sun glow and drifting cloud
+  - dusk: lilac indigo
+  - evening: deep indigo with a moon
+  - night: graphite to indigo with a moon and stars
+  - rain: streaks falling (daytime rain greys the sky); heat: the sun shimmers
+- **Two styles**, switchable in the dev panel: *colour moment* (the band is the sky, weather moves) and *subtle tint* (white card, the sky only as a still wash).
+- **Ticket**: the pick as a full-width photo (16:10) with its label (Your usual / My pick), the name, restaurant and time on it; the reason underneath in one line ("You've had it 6 times · Extra raita"); then the button with the price.
+- **Prompts** are compact pills (they are actions).
+- Desktop: the whole app is one 420px column.

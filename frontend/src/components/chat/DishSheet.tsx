@@ -57,7 +57,7 @@ export function DishSheet({ s, showNutrition, onClose, onAdd, onNotForMe }: Dish
             dragConstraints={{ top: 0, bottom: 0 }}
             dragElastic={{ top: 0, bottom: 0.6 }}
             onDragEnd={(_, info) => info.offset.y > 120 && onClose()}
-            className="fixed inset-x-0 bottom-0 z-50 mx-auto flex max-h-[90dvh] w-full max-w-[600px] flex-col rounded-t-[28px] bg-white shadow-e3"
+            className="fixed inset-x-0 bottom-0 z-50 mx-auto flex max-h-[90dvh] w-full max-w-[420px] flex-col rounded-t-[28px] bg-white shadow-e3"
           >
             <SheetBody key={s.dish.id} s={s} drag={drag} showNutrition={showNutrition} onAdd={onAdd} onNotForMe={onNotForMe} />
           </motion.div>

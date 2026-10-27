@@ -1,4 +1,4 @@
-import { CaretRightIcon, CheckCircleIcon, MinusIcon, PlusIcon, ShoppingBagIcon, SparkleIcon, ThumbsDownIcon, ThumbsUpIcon, TrashIcon, WarningCircleIcon, XCircleIcon } from '@phosphor-icons/react'
+import { CheckCircleIcon, MinusIcon, PlusIcon, ShoppingBagIcon, SparkleIcon, ThumbsDownIcon, ThumbsUpIcon, TrashIcon, WarningCircleIcon, XCircleIcon } from '@phosphor-icons/react'
 import { motion } from 'motion/react'
 import { useState, type ReactNode } from 'react'
 import type { CheckoutStatus, Order, OrderStatus } from '../../chat/useConversation'
@@ -9,7 +9,7 @@ import { totals, type CartLine, type Plan } from '../../domain/chat'
 import { money, NUDGE, ORDER } from '../../domain/copy'
 import { delivery, type BetterDeal } from '../../domain/orders'
 import { clockLabel } from '../../domain/time'
-import type { Ask, HomeModel, IconKey, Prompt, Suggestion } from '../../domain/types'
+import type { IconKey, Prompt, Suggestion } from '../../domain/types'
 import { spring } from '../../design/motion'
 import { cn } from '../../lib/cn'
 import { Button } from '../ui/Button'
@@ -22,173 +22,14 @@ export function HunchCard({ children, className }: { children: ReactNode; classN
   return <div className={cn('grid gap-4 overflow-hidden rounded-[24px] bg-white p-4 shadow-e1', className)}>{children}</div>
 }
 
-/** The message at the top of a card. */
-function Say({ children }: { children: ReactNode }) {
-  return <p className="text-[15px] leading-[22px] text-graphite-900">{children}</p>
-}
-
-// ---------- Today card (Home's empty state) ----------
-
-export interface TodayCardProps {
-  home: HomeModel
-  /** The live order when the stage opens mid-delivery */
-  order?: Order
-  orderActions: OrderActions
-  onOpen: (s: Suggestion) => void
-  onOrder: (s: Suggestion) => void
-  onPrompt: (p: Prompt) => void
-  onContext: () => void
-  onAnswer: (ask: Ask, yes: boolean) => void
-  onSchedule: () => void
-  onNotTonight: () => void
-}
-
-export function TodayCard({ home, order, orderActions, onOpen, onOrder, onPrompt, onContext, onAnswer, onSchedule, onNotTonight }: TodayCardProps) {
-  const hasRules = home.context.some(c => c.rule)
-  return (
-    <HunchCard className="gap-5 p-5">
-      <ContextRow home={home} onClick={hasRules ? onContext : undefined} />
-      <h1 className="text-[22px] font-semibold leading-7 tracking-[-0.015em] text-balance">{home.line}</h1>
-
-      {order ? (
-        <OrderBlock o={order} actions={orderActions} />
-      ) : home.nudge ? (
-        <NudgeRow s={home.nudge.pick} at={clockLabel(home.nudge.at)} onOpen={onOpen} onSchedule={onSchedule} onOrderNow={() => onOrder(home.nudge!.pick)} onNotTonight={onNotTonight} />
-      ) : (
-        home.pick && <PickRow s={home.pick} usual={home.pick === home.usual} onOpen={onOpen} onOrder={onOrder} />
-      )}
-
-      <div className="grid gap-0.5">
-        <span className="pb-1 text-caption font-normal text-graphite-500">Or ask me</span>
-        {home.prompts.map(p => (
-          <PromptRow key={p.text} p={p} onClick={() => onPrompt(p)} />
-        ))}
-      </div>
-
-      {home.ask && (
-        <div className="grid gap-3 rounded-[16px] bg-indigo-50 p-3.5">
-          <p className="text-label font-normal text-graphite-800">{home.ask.text}</p>
-          <div className="flex gap-2">
-            <Button size="sm" variant="soft" className="bg-white" onClick={() => onAnswer(home.ask!, true)}>
-              {home.ask.yes}
-            </Button>
-            <Button size="sm" variant="text" onClick={() => onAnswer(home.ask!, false)}>
-              {home.ask.no}
-            </Button>
-          </div>
-        </div>
-      )}
-    </HunchCard>
-  )
-}
-
-function ContextRow({ home, onClick }: { home: HomeModel; onClick?: () => void }) {
-  const items = home.context.map((c, i) => (
-    <span key={c.text} className="inline-flex items-center gap-1.5 whitespace-nowrap">
-      {i > 0 && <span className="text-graphite-300">·</span>}
-      <StageIcon icon={c.icon} size={15} className={c.rule ? 'text-graphite-700' : 'text-graphite-400'} />
-      <span className={c.rule ? 'text-graphite-700' : undefined}>{c.text}</span>
-    </span>
-  ))
-  const cls = 'flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] text-graphite-500'
-  if (!onClick) return <div className={cls}>{items}</div>
-  return (
-    <button type="button" onClick={onClick} aria-label="Today's preferences" className={cn(cls, '-m-1 justify-self-start rounded-full p-1 text-left hover:bg-graphite-50')}>
-      {items}
-      <CaretRightIcon size={12} className="text-graphite-400" />
-    </button>
-  )
-}
-
-function PickRow({ s, usual, onOpen, onOrder }: { s: Suggestion; usual: boolean; onOpen: (s: Suggestion) => void; onOrder: (s: Suggestion) => void }) {
-  return (
-    <div className={cn('grid gap-3', !s.open && 'opacity-70')}>
-      <button type="button" onClick={() => onOpen(s)} className="flex min-w-0 items-center gap-3.5 text-left">
-        <Photo slug={s.dish.id} alt="" px={80} className="size-[68px] shrink-0 rounded-[16px]" />
-        <div className="grid min-w-0 gap-0.5">
-          <span className="inline-flex items-center gap-1 text-caption text-indigo-600">
-            {usual ? (
-              'Your usual'
-            ) : (
-              <>
-                <SparkleIcon size={12} weight="fill" /> My pick
-              </>
-            )}
-          </span>
-          <span className="flex min-w-0 items-center gap-1.5 text-[15px] font-semibold leading-5">
-            <VegMark veg={s.dish.diet === 'veg'} />
-            <span className="truncate">{s.dish.name}</span>
-          </span>
-          <span className="truncate text-[13px] tabular-nums text-graphite-600">
-            {s.restaurant.name} · {s.open ? `${s.restaurant.etaMin} min` : s.opensLabel}
-          </span>
-          {s.customisation && <span className="truncate text-caption font-normal text-graphite-500">{s.customisation.join(' · ')}</span>}
-        </div>
-      </button>
-      {s.open ? (
-        <Button block size="lg" onClick={() => onOrder(s)}>
-          {usual ? 'Order again' : 'Order'} · <span className="tabular-nums">{money(s.dish.price)}</span>
-        </Button>
-      ) : (
-        <Button block size="lg" disabled>
-          {s.opensLabel}
-        </Button>
-      )}
-    </div>
-  )
-}
-
-/** The proactive moment: the usual, offered for later. Scheduling is the main action; saying no is one tap. */
-function NudgeRow({ s, at, onOpen, onSchedule, onOrderNow, onNotTonight }: { s: Suggestion; at: string; onOpen: (s: Suggestion) => void; onSchedule: () => void; onOrderNow: () => void; onNotTonight: () => void }) {
-  return (
-    <div className="grid gap-3">
-      <button type="button" onClick={() => onOpen(s)} className="flex min-w-0 items-center gap-3.5 text-left">
-        <Photo slug={s.dish.id} alt="" px={80} className="size-[68px] shrink-0 rounded-[16px]" />
-        <div className="grid min-w-0 gap-0.5">
-          <span className="text-caption text-indigo-600">Your usual dinner</span>
-          <span className="flex min-w-0 items-center gap-1.5 text-[15px] font-semibold leading-5">
-            <VegMark veg={s.dish.diet === 'veg'} />
-            <span className="truncate">{s.dish.name}</span>
-          </span>
-          <span className="truncate text-[13px] tabular-nums text-graphite-600">
-            {s.restaurant.name} · {money(s.dish.price)}
-          </span>
-          {s.customisation && <span className="truncate text-caption font-normal text-graphite-500">{s.customisation.join(' · ')}</span>}
-        </div>
-      </button>
-      <Button block size="lg" onClick={onSchedule}>
-        {NUDGE.schedule(at)}
-      </Button>
-      <div className="flex justify-center gap-2">
-        <Button size="sm" variant="text" onClick={onOrderNow}>
-          Order now
-        </Button>
-        <Button size="sm" variant="text" onClick={onNotTonight}>
-          {NUDGE.notTonight}
-        </Button>
-      </div>
-    </div>
-  )
-}
-
-function PromptRow({ p, onClick }: { p: Prompt; onClick: () => void }) {
-  return (
-    <motion.button type="button" onClick={onClick} whileTap={{ scale: 0.98 }} transition={spring.snappy} className="-mx-2 flex items-center gap-3 rounded-[14px] px-2 py-2 text-left transition-colors hover:bg-graphite-50">
-      <span className="grid size-8 shrink-0 place-items-center rounded-full bg-graphite-50 text-graphite-700">
-        <StageIcon icon={p.icon} size={16} />
-      </span>
-      <span className="flex-1 text-[15px]">{p.text}</span>
-      <CaretRightIcon size={16} className="text-graphite-300" />
-    </motion.button>
-  )
-}
 
 // ---------- reply card ----------
 
-export function ReplyCard({ text, items, refine, onOpen, onRefine }: { text: string; items: Suggestion[]; refine: Prompt[]; onOpen: (s: Suggestion) => void; onRefine: (p: Prompt) => void }) {
+/** The dishes Hunch is handing over; its words sit above, outside the card. */
+export function ReplyCard({ items, refine, onOpen, onRefine }: { items: Suggestion[]; refine: Prompt[]; onOpen: (s: Suggestion) => void; onRefine: (p: Prompt) => void }) {
+  if (!items.length && !refine.length) return null
   return (
     <HunchCard>
-      <Say>{text}</Say>
       {items.length > 0 && <TileRow items={items} onOpen={onOpen} pickFirst={!items[0].dish.soldOut} />}
       {refine.length > 0 && (
         <div className="flex flex-wrap gap-2">
@@ -311,10 +152,10 @@ function ErrorLine({ children }: { children: ReactNode }) {
 
 // ---------- plan ----------
 
-export function PlanCard({ text, plan, ordered, onOrder, onChange }: { text: string; plan: Plan; ordered: boolean; onOrder: () => void; onChange: () => void }) {
+export function PlanCard({ plan, ordered, onOrder, onChange }: { plan: Plan; ordered: boolean; onOrder: () => void; onChange: () => void }) {
+  if (!plan.lines.length) return null
   return (
     <HunchCard>
-      <Say>{text}</Say>
       {plan.lines.length > 0 && (
         <>
           <Lines lines={plan.lines} />
@@ -489,7 +330,7 @@ export interface OrderActions {
 }
 
 /** The live order: ETA counts down, steps advance, then delivered + a quick rating; or cancelled + refund. */
-function OrderBlock({ o, actions }: { o: Order; actions: OrderActions }) {
+export function OrderBlock({ o, actions }: { o: Order; actions: OrderActions }) {
   const method = paymentById(o.paymentId)
   const step = STEP_OF[o.status]
   const cancellable = o.status === 'cooking' || o.status === 'scheduled'
@@ -589,10 +430,9 @@ function OrderBlock({ o, actions }: { o: Order; actions: OrderActions }) {
   )
 }
 
-export function TrackingCard({ text, order, actions }: { text?: string; order: Order; actions: OrderActions }) {
+export function TrackingCard({ order, actions }: { order: Order; actions: OrderActions }) {
   return (
     <HunchCard>
-      {text && order.status !== 'cancelled' && <Say>{text}</Say>}
       <OrderBlock o={order} actions={actions} />
     </HunchCard>
   )

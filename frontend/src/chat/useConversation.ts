@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Mood } from '../components/hunch/moods'
+import type { SkyMode } from '../design/sky'
 import { findAddress, paymentById, type Address } from '../data/account'
 import { DISH_BY_ID } from '../data/menu'
 import { RESTAURANT_BY_ID } from '../data/restaurants'
@@ -94,6 +95,8 @@ export interface ConversationState {
   fastClock: boolean
   /** Dev: the next payment is declined */
   failNextPayment: boolean
+  /** Dev: the Today card's sky as a colour moment or a subtle tint */
+  sky: SkyMode
 }
 
 let seq = 0
@@ -103,7 +106,7 @@ const id = () => `m${++seq}`
 export const FAST_MINUTE_MS = 1500
 const RIDERS = ['Arjun', 'Imran', 'Sneha', 'Ravi']
 
-function initial(scenarioId: string, prev?: Pick<ConversationState, 'fastClock' | 'failNextPayment'>): ConversationState {
+function initial(scenarioId: string, prev?: Pick<ConversationState, 'fastClock' | 'failNextPayment' | 'sky'>): ConversationState {
   const s = scenarioById(scenarioId)
   const orders: Record<string, Order> = {}
   const a = s.ctx.activeOrder
@@ -132,6 +135,7 @@ function initial(scenarioId: string, prev?: Pick<ConversationState, 'fastClock' 
     orders,
     fastClock: prev?.fastClock ?? true,
     failNextPayment: prev?.failNextPayment ?? false,
+    sky: prev?.sky ?? 'moment',
   }
 }
 
@@ -667,7 +671,7 @@ export function useConversation(startScenario: string) {
 
   // ---------- dev ----------
 
-  const setDev = useCallback((patch: Partial<Pick<ConversationState, 'fastClock' | 'failNextPayment'>>) => set(patch), [set])
+  const setDev = useCallback((patch: Partial<Pick<ConversationState, 'fastClock' | 'failNextPayment' | 'sky'>>) => set(patch), [set])
 
   // ---------- derived ----------
 
