@@ -310,18 +310,18 @@ From the address sheet or Profile. `Use where I am` · Area chips · Flat, build
 ## 8. Voice and things, the Today sky
 
 ### Hunch's voice is not a card
-- Every Hunch turn is **voice → component**. The voice is 20/28 medium text on the page with Hunch's mark (a small orb; only the newest one breathes). It types in word by word.
+- Every Hunch turn is **voice → component**. The voice is 20/28 medium text on the page with the real Hunch beside it, small; the newest line carries Hunch's live mood, older ones rest. It types in word by word. Hunch beside messages can be hidden (dev panel).
 - The component (dish row, plan, checkout, tracking) arrives as a white card once the words have landed. No message text inside components.
 - The user stays as an ink bubble on the right. "Thinking" is the mark plus three dots, no card.
 
 ### Today card: a moment
-- **Sky band** (top): context, today's rules as tappable stamps, and Hunch's line at 26/32 on the sky of right now, in Indigo and Graphite only:
+- **The whole card is the sky** of right now, weather moving across all of it. On it: context, today's rules as tappable stamps, Hunch's line at 26/32, the pick, the prompts. Indigo and Graphite only:
   - morning and day: pale indigo, a soft sun glow and drifting cloud
   - dusk: lilac indigo
   - evening: deep indigo with a moon
   - night: graphite to indigo with a moon and stars
   - rain: streaks falling (daytime rain greys the sky); heat: the sun shimmers
-- **Two styles**, switchable in the dev panel: *colour moment* (the band is the sky, weather moves) and *subtle tint* (white card, the sky only as a still wash).
-- **Ticket**: the pick as a full-width photo (16:10) with its label (Your usual / My pick), the name, restaurant and time on it; the reason underneath in one line ("You've had it 6 times · Extra raita"); then the button with the price.
-- **Prompts** are compact pills (they are actions).
+- **Two styles**, switchable in the dev panel: *colour moment* (the card is the sky, weather moves) and *subtle tint* (white card, the sky only as a still wash from the top).
+- **Pick row**: one compact white row on the sky: photo left (72px), then label (Your usual / My pick), name (2 lines max), restaurant · time, reason; a small buy button with the price on the right. What you act on always sits on white.
+- **Prompts** are compact glass pills on the sky (they are actions).
 - Desktop: the whole app is one 420px column.

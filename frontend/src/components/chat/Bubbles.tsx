@@ -2,6 +2,8 @@ import { motion } from 'motion/react'
 import type { ReactNode } from 'react'
 import { emerge } from '../../design/motion'
 import { cn } from '../../lib/cn'
+import { Hunch } from '../hunch/Hunch'
+import type { Mood } from '../hunch/moods'
 
 /** Seconds between words as Hunch's voice types itself in. */
 const WORD = 0.035
@@ -9,15 +11,15 @@ const WORD = 0.035
 /** How long a line takes to appear; the component it introduces waits for it. */
 const voiceDelay = (text: string) => Math.min(text.split(' ').length * WORD + 0.15, 1.1)
 
-/** Hunch's mark beside its voice. The newest line breathes; older ones rest. */
-export function HunchMark({ live }: { live?: boolean }) {
+/**
+ * The real Hunch beside its voice, small. The newest line carries Hunch's current mood; older ones rest.
+ * The canvas is drawn larger than its slot because the body is ~60% of it (room for aura and hops).
+ */
+export function HunchMark({ mood = 'idle' }: { mood?: Mood }) {
   return (
-    <motion.span
-      aria-hidden
-      className="bg-orb mt-[5px] size-[18px] shrink-0 rounded-full shadow-[0_2px_6px_rgb(88_114_245/0.35)]"
-      animate={live ? { scale: [1, 1.14, 1] } : { scale: 1 }}
-      transition={live ? { duration: 2.4, repeat: Infinity, ease: 'easeInOut' } : undefined}
-    />
+    <span aria-hidden className="relative -my-1.5 -ml-2 size-10 shrink-0">
+      <Hunch mood={mood} size={40} look={[0.4, 0.2]} />
+    </span>
   )
 }
 
@@ -25,11 +27,11 @@ export function HunchMark({ live }: { live?: boolean }) {
  * Hunch talking (HOME_SPEC §2): words on the page, no card. Things it hands over
  * (dishes, checkout, tracking) are separate components below.
  */
-export function HunchVoice({ text, live, className }: { text: string; live?: boolean; className?: string }) {
+export function HunchVoice({ text, mood, mascot = true, className }: { text: string; mood?: Mood; mascot?: boolean; className?: string }) {
   const words = text.split(' ')
   return (
-    <div className={cn('flex gap-2.5 self-stretch pr-4', className)}>
-      <HunchMark live={live} />
+    <div className={cn('flex gap-1.5 self-stretch pr-4', className)}>
+      {mascot && <HunchMark mood={mood} />}
       <p aria-label={text} className="text-[20px] font-medium leading-7 tracking-[-0.012em] text-pretty text-graphite-900">
         {words.map((w, i) => (
           <motion.span
@@ -49,10 +51,10 @@ export function HunchVoice({ text, live, className }: { text: string; live?: boo
 }
 
 /** One Hunch turn: its voice, then the thing it's handing over once the words have landed. */
-export function Turn({ text, live, children }: { text?: string; live?: boolean; children?: ReactNode }) {
+export function Turn({ text, mood, mascot, children }: { text?: string; mood?: Mood; mascot?: boolean; children?: ReactNode }) {
   return (
     <div className="grid gap-3">
-      {text && <HunchVoice text={text} live={live} />}
+      {text && <HunchVoice text={text} mood={mood} mascot={mascot} />}
       {children && (
         <motion.div initial="hidden" animate="shown" variants={emerge} transition={{ delay: text ? voiceDelay(text) : 0 }} style={{ transformOrigin: '50% 0%' }}>
           {children}
@@ -77,11 +79,11 @@ export function UserSays({ children }: { children: ReactNode }) {
 }
 
 /** Hunch is thinking: its mark and three dots where the words will appear. */
-export function Typing() {
+export function Typing({ mascot = true }: { mascot?: boolean }) {
   return (
-    <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex h-7 items-start gap-2.5 self-start" aria-label="Hunch is typing">
-      <HunchMark live />
-      <span className="mt-[5px] flex gap-1">
+    <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex h-7 items-start gap-1.5 self-start" aria-label="Hunch is typing">
+      {mascot && <HunchMark mood="thinking" />}
+      <span className="mt-[11px] flex gap-1">
         {[0, 1, 2].map(i => (
           <motion.i
             key={i}

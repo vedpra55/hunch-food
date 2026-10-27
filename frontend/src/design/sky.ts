@@ -41,8 +41,8 @@ export function skyFill(s: Sky): string {
   }
 }
 
-/** Subtle tint: white card, the sky only as a wash fading into it. */
+/** Subtle tint: a white card with the sky as a still wash from the top. */
 export function skyTint(s: Sky): string {
   const top = s.weather === 'rain' ? c('graphite-100') : s.time === 'dusk' || s.dark ? c('indigo-100') : c('indigo-50')
-  return `linear-gradient(180deg, ${top} 0%, ${c('white')} 100%)`
+  return `linear-gradient(180deg, ${top} 0%, ${c('white')} 70%)`
 }

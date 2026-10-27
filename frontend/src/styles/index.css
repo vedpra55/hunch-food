@@ -102,7 +102,7 @@
 @keyframes rain-fall {
   from { transform: translateY(-30px) rotate(12deg); opacity: 0; }
   15% { opacity: 1; }
-  to { transform: translateY(220px) rotate(12deg); opacity: 0; }
+  to { transform: translateY(520px) rotate(12deg); opacity: 0; }
 }
 @keyframes twinkle {
   0%, 100% { opacity: 0.25; }

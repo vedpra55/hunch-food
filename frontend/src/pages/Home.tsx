@@ -36,7 +36,7 @@ export function Home() {
   const talked = state.thread.some(m => m.type === 'user')
   const address = findAddress(state.addresses, state.addressId)
   const payment = paymentById(state.paymentId)
-  // Only the newest thing Hunch said breathes.
+  // Only the newest thing Hunch said carries its live mood.
   const lastVoice = [...state.thread].reverse().find(m => (m.type === 'hunch' || m.type === 'results' || m.type === 'plan' || m.type === 'tracking') && 'text' in m && m.text)?.id
   const orderActions = { onAskCancel: api.askCancel, onCancel: api.cancel, onRate: api.rate }
 
@@ -75,16 +75,16 @@ export function Home() {
       case 'user':
         return <UserSays key={m.id}>{m.text}</UserSays>
       case 'hunch':
-        return <Turn key={m.id} text={m.text} live={m.id === lastVoice} />
+        return <Turn key={m.id} text={m.text} mood={m.id === lastVoice ? api.mood : 'idle'} mascot={state.mascot} />
       case 'results':
         return (
-          <Turn key={m.id} text={m.text} live={m.id === lastVoice}>
+          <Turn key={m.id} text={m.text} mood={m.id === lastVoice ? api.mood : 'idle'} mascot={state.mascot}>
             <ReplyCard items={m.items} refine={m.refine} onOpen={api.openSheet} onRefine={p => api.refine(m.id, p)} />
           </Turn>
         )
       case 'plan':
         return (
-          <Turn key={m.id} text={m.text} live={m.id === lastVoice}>
+          <Turn key={m.id} text={m.text} mood={m.id === lastVoice ? api.mood : 'idle'} mascot={state.mascot}>
             <PlanCard plan={m.plan} ordered={m.ordered} onOrder={() => api.orderPlan(m.id)} onChange={api.changePlan} />
           </Turn>
         )
@@ -114,7 +114,7 @@ export function Home() {
       case 'tracking': {
         const o = state.orders[m.orderId]
         return (
-          <Turn key={m.id} text={o.status === 'cancelled' ? undefined : m.text} live={m.id === lastVoice}>
+          <Turn key={m.id} text={o.status === 'cancelled' ? undefined : m.text} mood={m.id === lastVoice ? api.mood : 'idle'} mascot={state.mascot}>
             <TrackingCard order={o} actions={orderActions} />
           </Turn>
         )
@@ -136,7 +136,7 @@ export function Home() {
         }
       >
         {state.thread.map(render)}
-        <AnimatePresence>{state.working && <Typing key="typing" />}</AnimatePresence>
+        <AnimatePresence>{state.working && <Typing key="typing" mascot={state.mascot} />}</AnimatePresence>
         {/* scroll margin keeps the latest card clear of the message bar */}
         <div ref={end} className="h-px scroll-mb-44" />
       </AppShell>

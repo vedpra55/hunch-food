@@ -97,6 +97,8 @@ export interface ConversationState {
   failNextPayment: boolean
   /** Dev: the Today card's sky as a colour moment or a subtle tint */
   sky: SkyMode
+  /** Dev: show Hunch beside its messages */
+  mascot: boolean
 }
 
 let seq = 0
@@ -106,7 +108,7 @@ const id = () => `m${++seq}`
 export const FAST_MINUTE_MS = 1500
 const RIDERS = ['Arjun', 'Imran', 'Sneha', 'Ravi']
 
-function initial(scenarioId: string, prev?: Pick<ConversationState, 'fastClock' | 'failNextPayment' | 'sky'>): ConversationState {
+function initial(scenarioId: string, prev?: Pick<ConversationState, 'fastClock' | 'failNextPayment' | 'sky' | 'mascot'>): ConversationState {
   const s = scenarioById(scenarioId)
   const orders: Record<string, Order> = {}
   const a = s.ctx.activeOrder
@@ -136,6 +138,7 @@ function initial(scenarioId: string, prev?: Pick<ConversationState, 'fastClock' 
     fastClock: prev?.fastClock ?? true,
     failNextPayment: prev?.failNextPayment ?? false,
     sky: prev?.sky ?? 'moment',
+    mascot: prev?.mascot ?? true,
   }
 }
 
@@ -671,7 +674,7 @@ export function useConversation(startScenario: string) {
 
   // ---------- dev ----------
 
-  const setDev = useCallback((patch: Partial<Pick<ConversationState, 'fastClock' | 'failNextPayment' | 'sky'>>) => set(patch), [set])
+  const setDev = useCallback((patch: Partial<Pick<ConversationState, 'fastClock' | 'failNextPayment' | 'sky' | 'mascot'>>) => set(patch), [set])
 
   // ---------- derived ----------
 
