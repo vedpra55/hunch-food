@@ -1,5 +1,7 @@
 import {
   BarbellIcon,
+  BellIcon,
+  ReceiptIcon,
   BriefcaseIcon,
   CreditCardIcon,
   DeviceMobileIcon,
@@ -57,6 +59,8 @@ const ICONS: Record<IconKey, Icon> = {
   phone: DeviceMobileIcon,
   card: CreditCardIcon,
   cash: MoneyIcon,
+  bell: BellIcon,
+  receipt: ReceiptIcon,
 }
 
 export function StageIcon({ icon, size = 16, className }: { icon: IconKey; size?: number; className?: string }) {

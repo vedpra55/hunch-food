@@ -173,5 +173,78 @@ export const ORDER = {
   cancelled: (amount: number, method: string, cash: boolean) => (cash ? `Cancelled. Nothing to pay.` : `Cancelled. ${money(amount)} is on its way back to ${method}, usually in 2–3 days.`),
   rateAsk: 'How was it?',
   rated: { up: `Glad you liked it. I'll remember.`, down: `Noted. I'll steer you away from it next time.` },
-  status: { near: 'Arriving now', delivered: 'Delivered' },
+  status: { near: 'Arriving now', delivered: 'Delivered', scheduled: (at: string) => `Scheduled · ${at}` },
+  justOnce: 'Just this once · not learning from this order',
+}
+
+/** Three taps before the first suggestion (HOME_SPEC §7). Never asks about religion, veg days or fasting. */
+export const ONBOARD = {
+  hello: (name: string) => `Hi ${name}. Three taps and I'll know what to get you.`,
+  steps: ['What do you eat?', "Anything you can't have?", 'Working towards anything?'],
+  diets: [
+    { id: 'nonveg', label: 'Everything' },
+    { id: 'eggetarian', label: 'Veg, plus eggs' },
+    { id: 'veg', label: 'Vegetarian' },
+    { id: 'jain', label: 'Jain' },
+    { id: 'vegan', label: 'Vegan' },
+  ],
+  allergies: [
+    { id: 'dairy', label: 'Dairy' },
+    { id: 'gluten', label: 'Gluten' },
+    { id: 'nuts', label: 'Nuts' },
+    { id: 'egg', label: 'Egg' },
+    { id: 'soy', label: 'Soy' },
+  ],
+  goals: [
+    { id: 'light', label: 'Eating light' },
+    { id: 'protein', label: 'More protein' },
+    { id: 'cutting', label: 'Cutting' },
+    { id: 'budget', label: 'Spending less' },
+  ],
+  noGoal: 'Not right now',
+  nothing: 'Nothing',
+  later: 'Change anything later in your profile.',
+  done: (goal?: string, until?: string) => (goal && until ? `Got it. ${goal} until ${until}.` : `Got it. Here's what's good right now.`),
+} as const
+
+/** Profile → What Hunch knows. Every item says where it came from. */
+export const PROFILE = {
+  source: {
+    told: 'You told me',
+    learned: (n: number) => `Learned from ${n} orders`,
+    pattern: (weeks: number) => `Noticed ${weeks} weeks in a row`,
+  },
+  spice: ['Mild', 'Medium', 'Hot', 'Very hot'],
+  goalLabel: { cutting: 'Cutting', protein: 'More protein', light: 'Eating light', budget: 'Spending less' },
+  nudge: (time: string) => `Around ${time}, only when it's useful. Once a day at most.`,
+  weather: 'Rain or heat changes what I suggest.',
+  location: 'Location is used only while the app is open.',
+  justOnce: "Your next order won't change what I know.",
+  forget: 'Forget what I learned',
+  forgetAsk: 'Forget usuals, habits and patterns? What you told me stays.',
+  forgot: 'Done. I start fresh, keeping what you told me.',
+}
+
+/** Ordering a past order again. */
+export const REORDER = {
+  /** One reason per missing dish, then what happens next. */
+  missing: (reasons: string[], all: boolean) => `${capital(joinAnd(reasons))}${all ? '. Want something that\'s open now?' : ', so I left it out.'}`,
+  why: {
+    soldOut: (dish: string) => `${dish} is sold out today`,
+    closed: (place: string, opens: string) => `${place} opens at ${opens}`,
+    rule: (dish: string) => `${dish} doesn't fit today`,
+  },
+  none: () => `Nothing to repeat yet. Tell me what you feel like.`,
+}
+
+/** The proactive moment (HOME_SPEC §7): one reason, one offer, easy to say no. */
+export const NUDGE = {
+  rain: (from: string, at: string) => `Rain from ${from}. Dinner here by ${at}, before the rush?`,
+  usual: (at: string) => `Dinner around ${at}, like usual? I can line it up.`,
+  banner: (from: string | undefined, dish: string, at: string) => (from ? `Rain from ${from}. ${dish} by ${at}?` : `${dish} by ${at}, like usual?`),
+  schedule: (at: string) => `Schedule for ${at}`,
+  notTonight: 'Not tonight',
+  quiet: () => `Okay. I'll stay quiet tonight.`,
+  scheduled: (at: string, place: string) => `Done. ${place} starts cooking in time for ${at}.`,
+  caption: (place: string, start: string) => `Scheduled. ${place} starts at ${start}`,
 }

@@ -22,10 +22,12 @@ const FLOWS: Flow[] = [
   {
     id: 'first',
     label: 'First-time user',
-    note: 'Asks for biryani, opens it, adds, pays',
+    note: 'Three taps, asks for biryani, adds, pays',
     scenario: 'first',
     run: async api => {
       await api.wait(1400)
+      api.finishOnboarding({ diet: 'nonveg', allergies: ['nuts'], goal: 'protein' })
+      await api.wait(1800)
       api.send('Best biryani nearby')
       await api.wait(2400)
       const s = firstItem(api)
@@ -196,6 +198,49 @@ const FLOWS: Flow[] = [
       api.askCancel(o.id, true)
       await api.wait(1800)
       api.cancel(o.id)
+    },
+  },
+  {
+    id: 'nudge',
+    label: '6 PM nudge',
+    note: 'Notification, schedule the usual for 8:30, pay',
+    scenario: 'nudge',
+    run: async api => {
+      await api.wait(3500)
+      api.scheduleNudge()
+      await api.wait(2000)
+      const c = lastCheckout(api)
+      if (c) api.pay(c)
+    },
+  },
+  {
+    id: 'reorder',
+    label: 'Reorder from history',
+    note: 'Profile, repeat an order with a sold-out dish',
+    scenario: 'dinner-rain',
+    run: async api => {
+      await api.wait(1000)
+      api.openProfile()
+      await api.wait(2200)
+      api.reorder('h3')
+    },
+  },
+  {
+    id: 'address',
+    label: 'Add an address',
+    note: 'Out of reach for the cart, so add one that works',
+    scenario: 'dinner-rain',
+    run: async api => {
+      await api.wait(1200)
+      const u = api.homeNow().usual
+      if (!u) return
+      api.orderAgain(u)
+      await api.wait(1600)
+      api.openPicker('address')
+      await api.wait(1400)
+      api.openPicker('addAddress')
+      await api.wait(1800)
+      api.addAddress({ label: 'Gym', line: '3rd Cross, Ulsoor', area: 'Ulsoor', extraKm: 3 })
     },
   },
 ]

@@ -1,9 +1,9 @@
 import { DISH_BY_ID, MENU } from '../data/menu'
 import { RESTAURANT_BY_ID } from '../data/restaurants'
-import { ASKS, GROUP_TITLES, LINES, PROMPTS, REASONS } from './copy'
+import { ASKS, GROUP_TITLES, LINES, NUDGE, PROMPTS, REASONS } from './copy'
 import { activeGoal, allowed, fastingDay, inferredVegDayToday, ruleChips, vegDayToday } from './rules'
 import { DAY_NAMES, clockLabel, isOpen, mealAt, weekday } from './time'
-import type { Context, ContextItem, Dish, Goal, Group, HomeModel, IconKey, Meal, Prompt, Restaurant, Stage, Suggestion, Usual, UserProfile } from './types'
+import type { Context, ContextItem, Dish, Goal, Group, HomeModel, IconKey, Meal, Nudge, Prompt, Restaurant, Stage, Suggestion, Usual, UserProfile } from './types'
 
 export interface Catalogue {
   menu: Dish[]
@@ -60,23 +60,64 @@ export function buildHome(user: UserProfile, ctx: Context, cat: Catalogue = DEFA
 
   const usual = pickUsual(candidates, s)
   const groups = pickGroups(candidates, s, usual)
+  const n = nudge(candidates, s)
 
   return {
     stage: s.stage,
     context: contextRow(s),
-    line: line(s, usual),
+    line: n ? nudgeLine(s, n) : line(s, usual),
     rules: ruleChips(user, ctx),
     ask: ask(s),
     // Your usual when it fits the moment; otherwise the best fit Hunch ranked.
-    pick: usual ?? bestFit(groups),
+    pick: n?.pick ?? usual ?? bestFit(groups),
     usual,
     groups,
     prompts: prompts(s),
+    nudge: n,
   }
+}
+
+const minutesOf = (hhmm: string) => {
+  const [h, m] = hhmm.split(':').map(Number)
+  return h * 60 + m
+}
+
+/** How long after the nudge time the offer stays on Home. */
+export const NUDGE_WINDOW_MIN = 90
+
+/** The id that marks today's nudge as answered: one a day at most. */
+export const nudgeId = (now: Date) => `nudge-${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`
+
+/**
+ * The proactive moment (HOME_SPEC §7). Only with a real pattern (a dinner usual and a usual dinner time),
+ * inside the user's chosen window, once a day, and never when a rule rules the usual out.
+ */
+function nudge(candidates: Suggestion[], s: Signals): Nudge | undefined {
+  const { user, ctx } = s
+  const at = user.mealTimes?.dinner
+  if (!user.nudge?.on || !at || s.stage === 'first' || ctx.answered.includes(nudgeId(ctx.now))) return undefined
+  const now = ctx.now.getHours() * 60 + ctx.now.getMinutes()
+  const from = minutesOf(user.nudge.at)
+  if (now < from || now >= from + NUDGE_WINDOW_MIN || now >= minutesOf(at) - 45) return undefined
+  const dinnerTime = new Date(ctx.now)
+  dinnerTime.setHours(Math.floor(minutesOf(at) / 60), minutesOf(at) % 60, 0, 0)
+  const pick = candidates
+    .filter(c => {
+      const u = s.usuals.get(c.dish.id)
+      return u?.meal === 'dinner' && !c.dish.soldOut && !has(c, 'drink') && isOpen(c.restaurant, dinnerTime)
+    })
+    .sort((a, b) => s.usuals.get(b.dish.id)!.times - s.usuals.get(a.dish.id)!.times)[0]
+  return pick ? { id: nudgeId(ctx.now), at, pick: { ...pick, open: true } } : undefined
+}
+
+function nudgeLine(s: Signals, n: Nudge) {
+  const f = s.ctx.forecast
+  return f?.kind === 'rain' && s.user.useWeather !== false ? NUDGE.rain(clockLabel(f.at), clockLabel(n.at)) : NUDGE.usual(clockLabel(n.at))
 }
 
 export function signals(user: UserProfile, ctx: Context): Signals {
   const meal = mealAt(ctx.now)
+  const weatherOn = user.useWeather !== false
   return {
     user,
     ctx,
@@ -86,9 +127,10 @@ export function signals(user: UserProfile, ctx: Context): Signals {
     vegDay: !!vegDayToday(user, ctx),
     fastDay: fastingDay(user, ctx),
     inferredVeg: !!inferredVegDayToday(user, ctx),
-    rainy: ctx.weather.kind === 'rain',
-    hot: ctx.weather.kind === 'hot' || ctx.weather.tempC >= 33,
-    cold: ctx.weather.kind === 'cold' || ctx.weather.tempC <= 15,
+    // Weather can be switched off in Profile; then it never shapes a suggestion.
+    rainy: weatherOn && ctx.weather.kind === 'rain',
+    hot: weatherOn && (ctx.weather.kind === 'hot' || ctx.weather.tempC >= 33),
+    cold: weatherOn && (ctx.weather.kind === 'cold' || ctx.weather.tempC <= 15),
     usuals: new Map(user.usuals.map(u => [u.dishId, u])),
   }
 }
@@ -322,7 +364,9 @@ function contextRow(s: Signals): ContextItem[] {
       ? { icon: 'hot', text: `${ctx.weather.tempC}°` }
       : s.cold
         ? { icon: 'cold', text: `${ctx.weather.tempC}°` }
-        : undefined
+        : s.user.useWeather !== false && ctx.forecast?.kind === 'rain'
+          ? { icon: 'rain', text: `Rain from ${clockLabel(ctx.forecast.at)}` }
+          : undefined
   if (s.stage === 'first') return [time, weather ?? { icon: 'pin', text: ctx.area }]
 
   const goalIcon: Record<string, IconKey> = { cutting: 'target', protein: 'barbell', light: 'leaf', budget: 'tag' }

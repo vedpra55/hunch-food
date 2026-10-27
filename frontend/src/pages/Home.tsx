@@ -4,12 +4,17 @@ import { useConversation, type Msg } from '../chat/useConversation'
 import { Emerge, HunchSays, Typing, UserSays } from '../components/chat/Bubbles'
 import { CartPill, CheckoutCard, PlanCard, ReplyCard, TodayCard, TrackingCard } from '../components/chat/Cards'
 import { DishSheet } from '../components/chat/DishSheet'
-import { OptionsSheet } from '../components/chat/BottomSheet'
+import { AddressSheet } from '../components/chat/AddressSheet'
+import { AddRow, OptionsSheet } from '../components/chat/BottomSheet'
+import { NudgeBanner } from '../components/chat/NudgeBanner'
+import { OnboardingCard } from '../components/chat/OnboardingCard'
+import { ProfilePanel } from '../components/chat/ProfilePanel'
 import { TodaySheet } from '../components/chat/TodaySheet'
 import { TopBar } from '../components/chat/TopBar'
 import { AppShell } from '../components/layout/AppShell'
 import { Composer } from '../components/ui/Composer'
-import { ADDRESSES, addressById, PAYMENTS, paymentById } from '../data/account'
+import { addressIcon, findAddress, PAYMENTS, paymentById } from '../data/account'
+import { ONBOARD, PROFILE } from '../domain/copy'
 import { delivery } from '../domain/orders'
 import { activeGoal } from '../domain/rules'
 import { DevPanel } from '../dev/DevPanel'
@@ -27,7 +32,7 @@ export function Home() {
   const { state, home } = api
   const end = useRef<HTMLDivElement>(null)
   const talked = state.thread.some(m => m.type === 'user')
-  const address = addressById(state.addressId)
+  const address = findAddress(state.addresses, state.addressId)
   const payment = paymentById(state.paymentId)
   const orderActions = { onAskCancel: api.askCancel, onCancel: api.cancel, onRate: api.rate }
 
@@ -50,7 +55,15 @@ export function Home() {
               onPrompt={p => api.send(p.text)}
               onContext={api.openToday}
               onAnswer={api.answerAsk}
+              onSchedule={api.scheduleNudge}
+              onNotTonight={api.dismissNudge}
             />
+          </Emerge>
+        )
+      case 'onboarding':
+        return (
+          <Emerge key={m.id}>
+            <OnboardingCard name={state.user.firstName} summary={m.summary} onDone={api.finishOnboarding} />
           </Emerge>
         )
       case 'user':
@@ -78,6 +91,8 @@ export function Home() {
               deal={m.deal}
               saved={m.saved}
               error={m.error}
+              scheduleAt={m.scheduleAt}
+              justOnce={state.justOnce}
               address={address}
               payment={payment}
               onQty={api.changeQty}
@@ -104,7 +119,7 @@ export function Home() {
       <AppShell
         // Until the conversation starts, the Today card sits in the middle of the screen.
         className={cn('gap-4', !talked && 'justify-center pb-16')}
-        top={<TopBar mood={api.mood} status={api.status} working={!!state.working} initial={state.user.firstName[0]} />}
+        top={<TopBar mood={api.mood} status={api.status} working={!!state.working} initial={state.user.firstName[0]} onProfile={api.openProfile} />}
         bottom={
           <div className="grid gap-2.5">
             <AnimatePresence>{state.cart.length > 0 && !api.openCheckout && <CartPill key="cart" lines={state.cart} onView={api.viewCart} />}</AnimatePresence>
@@ -124,11 +139,36 @@ export function Home() {
         open={state.picker === 'address'}
         title="Deliver to"
         selected={state.addressId}
-        options={ADDRESSES.map(a => {
+        options={state.addresses.map(a => {
           const out = delivery(state.cart, a).unreachable[0]
-          return { id: a.id, icon: a.id === 'work' ? 'briefcase' : 'home', label: a.label, detail: a.line, warning: out ? `${out.name} doesn't deliver here` : undefined }
+          return { id: a.id, icon: addressIcon(a), label: a.label, detail: a.line, warning: out ? `${out.name} doesn't deliver here` : undefined }
         })}
         onPick={api.chooseAddress}
+        onClose={api.closePicker}
+        footer={<AddRow label="Add address" onClick={() => api.openPicker('addAddress')} />}
+      />
+      <AddressSheet open={state.picker === 'addAddress'} taken={state.addresses.map(a => a.label)} onSave={api.addAddress} onClose={api.closePicker} />
+      <OptionsSheet
+        open={state.picker === 'diet'}
+        title="What do you eat?"
+        selected={state.user.diet}
+        options={ONBOARD.diets.map(d => ({ id: d.id, label: d.label }))}
+        onPick={id => {
+          api.updateUser(() => ({ diet: id as typeof state.user.diet }))
+          api.closePicker()
+        }}
+        onClose={api.closePicker}
+      />
+      <OptionsSheet
+        open={state.picker === 'goal'}
+        title="Working towards"
+        note="Goals end on their own after 30 days."
+        selected={state.user.goal?.kind ?? 'none'}
+        options={[...ONBOARD.goals.map(g => ({ id: g.id, label: PROFILE.goalLabel[g.id] })), { id: 'none', label: 'No goal' }]}
+        onPick={id => {
+          api.setGoal(id === 'none' ? undefined : (id as NonNullable<typeof state.user.goal>['kind']))
+          api.closePicker()
+        }}
         onClose={api.closePicker}
       />
       <OptionsSheet
@@ -139,6 +179,8 @@ export function Home() {
         onPick={api.choosePayment}
         onClose={api.closePicker}
       />
+      <ProfilePanel api={api} />
+      <NudgeBanner text={state.banner} onDismiss={api.dismissBanner} />
       {DEV && <DevPanel api={api} />}
     </>
   )

@@ -1,3 +1,4 @@
+import { ADDRESSES, CURRENT_LOCATION, type Address } from './account'
 import type { Context, UserProfile } from '../domain/types'
 
 /**
@@ -25,6 +26,16 @@ export const RIYA: UserProfile = {
   spice: 2,
   priceComfort: 300,
   orderCount: 38,
+  mealTimes: { breakfast: '08:45', lunch: '13:15', dinner: '20:30' },
+  nudge: { on: true, at: '18:00' },
+  useWeather: true,
+  history: [
+    { id: 'h1', at: '2026-10-26T20:35:00', lines: [{ dishId: 'chicken-biryani', qty: 1, customisation: ['Medium spice', 'Extra raita'] }], amount: 289, rating: 'up' },
+    { id: 'h2', at: '2026-10-26T08:50:00', lines: [{ dishId: 'masala-dosa', qty: 1, customisation: ['Extra chutney'] }, { dishId: 'filter-coffee', qty: 2 }], amount: 227 },
+    { id: 'h3', at: '2026-10-24T21:05:00', lines: [{ dishId: 'mutton-biryani', qty: 1 }, { dishId: 'gulab-jamun', qty: 1 }], amount: 478 },
+    { id: 'h4', at: '2026-10-23T13:20:00', lines: [{ dishId: 'chicken-bowl', qty: 1, customisation: ['Extra chicken', 'No onion'] }], amount: 269, rating: 'up' },
+    { id: 'h5', at: '2026-10-22T20:15:00', lines: [{ dishId: 'dal-makhani', qty: 1 }], amount: 238 },
+  ],
 }
 
 export const NEW_USER: UserProfile = {
@@ -38,7 +49,14 @@ export const NEW_USER: UserProfile = {
   spice: 1,
   priceComfort: 0,
   orderCount: 0,
+  onboarded: false,
+  useWeather: true,
+  nudge: { on: true, at: '18:00' },
+  history: [],
 }
+
+/** A new phone knows only where it is. */
+const NEW_USER_ADDRESSES: Address[] = [{ id: 'here', label: 'Current location', line: `${CURRENT_LOCATION.line}, ${CURRENT_LOCATION.area}`, area: CURRENT_LOCATION.area, extraKm: 0 }]
 
 const ctx = (iso: string, weather: Context['weather'], extra: Partial<Context> = {}): Context => ({
   now: new Date(iso),
@@ -54,10 +72,18 @@ export interface Scenario {
   label: string
   user: UserProfile
   ctx: Context
+  /** Saved places; defaults to Home, Work, Parents' */
+  addresses?: Address[]
 }
 
 export const SCENARIOS: Scenario[] = [
-  { id: 'first', label: 'First visit · lunch', user: NEW_USER, ctx: ctx('2026-10-27T13:10:00', { kind: 'clear', tempC: 29 }) },
+  { id: 'first', label: 'First visit · onboarding', user: NEW_USER, ctx: ctx('2026-10-27T13:10:00', { kind: 'clear', tempC: 29 }), addresses: NEW_USER_ADDRESSES },
+  {
+    id: 'nudge',
+    label: '6 PM · rain coming · nudge',
+    user: RIYA,
+    ctx: ctx('2026-10-27T18:00:00', { kind: 'clear', tempC: 25 }, { forecast: { kind: 'rain', at: '19:00' } }),
+  },
   { id: 'breakfast', label: 'Breakfast · Wednesday', user: RIYA, ctx: ctx('2026-10-28T08:40:00', { kind: 'clear', tempC: 24 }) },
   { id: 'lunch-hot', label: 'Lunch · 35°', user: RIYA, ctx: ctx('2026-10-28T13:20:00', { kind: 'hot', tempC: 35 }) },
   { id: 'dinner-rain', label: 'Dinner · raining · cutting', user: RIYA, ctx: ctx('2026-10-27T20:15:00', { kind: 'rain', tempC: 23 }) },
@@ -84,3 +110,5 @@ export const SCENARIOS: Scenario[] = [
 ]
 
 export const scenarioById = (id: string | null) => SCENARIOS.find(s => s.id === id) ?? SCENARIOS[3]
+
+export const addressesFor = (s: Scenario) => s.addresses ?? ADDRESSES

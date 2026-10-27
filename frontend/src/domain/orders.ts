@@ -1,8 +1,11 @@
 import type { Address } from '../data/account'
 import { DISH_BY_ID } from '../data/menu'
+import { RESTAURANTS } from '../data/restaurants'
 import { totals, type CartLine } from './chat'
 import { allowedSuggestions, signals } from './recommend'
-import type { Context, Restaurant, Suggestion, UserProfile } from './types'
+import { allowed } from './rules'
+import { isOpen } from './time'
+import type { Context, Dish, PastOrder, Restaurant, Suggestion, UserProfile } from './types'
 
 /** Kitchens deliver up to this far. */
 export const MAX_DELIVERY_KM = 7
@@ -11,7 +14,10 @@ const MIN_PER_KM = 3
 /** An offer has to be worth interrupting checkout for. */
 export const MIN_SAVING = 30
 
-export const deliverable = (r: Restaurant, a: Address) => r.distanceKm + a.extraKm <= MAX_DELIVERY_KM
+export const deliverable = (r: Restaurant, a: Pick<Address, 'extraKm'>) => r.distanceKm + a.extraKm <= MAX_DELIVERY_KM
+
+/** How many kitchens reach a place: shown while adding an address. */
+export const kitchensReaching = (extraKm: number) => RESTAURANTS.filter(r => deliverable(r, { extraKm })).length
 export const etaTo = (r: Restaurant, a: Address) => r.etaMin + Math.round(a.extraKm * MIN_PER_KM)
 
 /** Everything checkout needs to say about getting this order to this address. */
@@ -51,4 +57,27 @@ export function betterDeal(lines: CartLine[], user: UserProfile, ctx: Context, a
     }
   }
   return best
+}
+
+/**
+ * Reorder a past order as it can be ordered today: sold-out dishes, closed kitchens and
+ * anything today's rules forbid (a veg day, a fast) drop out, and are named so Hunch can say why.
+ */
+export interface Missing {
+  dish: Dish
+  restaurant: Restaurant
+  why: 'soldOut' | 'closed' | 'rule'
+}
+
+export function reorder(past: PastOrder, user: UserProfile, ctx: Context): { lines: CartLine[]; missing: Missing[] } {
+  const lines: CartLine[] = []
+  const missing: Missing[] = []
+  for (const l of past.lines) {
+    const d = DISH_BY_ID[l.dishId]
+    const r = RESTAURANTS.find(x => x.id === d.restaurantId)!
+    const why = !allowed(d, user, ctx) ? 'rule' : d.soldOut ? 'soldOut' : !isOpen(r, ctx.now) ? 'closed' : undefined
+    if (why) missing.push({ dish: d, restaurant: r, why })
+    else lines.push({ dishId: l.dishId, qty: l.qty, customisation: l.customisation })
+  }
+  return { lines, missing }
 }

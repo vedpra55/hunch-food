@@ -195,3 +195,38 @@ describe('goals and context shape the screen', () => {
     expect(m.pick).toBe(m.usual)
   })
 })
+
+describe('the proactive moment', () => {
+  it('offers the dinner usual at 6 pm, led by the coming rain', () => {
+    const m = home('nudge')
+    expect(m.nudge?.pick.dish.id).toBe('chicken-biryani')
+    expect(m.nudge?.at).toBe('20:30')
+    expect(m.line).toBe('Rain from 7 pm. Dinner here by 8:30 pm, before the rush?')
+    expect(m.pick).toBe(m.nudge?.pick)
+  })
+  it('says nothing about weather when weather is off', () => {
+    const m = home('nudge', { useWeather: false })
+    expect(m.line).toBe('Dinner around 8:30 pm, like usual? I can line it up.')
+    expect(m.context.some(c => c.icon === 'rain')).toBe(false)
+  })
+  it('stays quiet when switched off, answered today, outside the window or without a pattern', () => {
+    expect(home('nudge', { nudge: { on: false, at: '18:00' } }).nudge).toBeUndefined()
+    expect(home('nudge', { nudge: { on: true, at: '19:00' } }).nudge).toBeUndefined()
+    expect(home('nudge', { mealTimes: undefined }).nudge).toBeUndefined()
+    expect(home('nudge', { usuals: RIYA.usuals.filter(u => u.meal !== 'dinner') }).nudge).toBeUndefined()
+    const s = scenarioById('nudge')
+    expect(home('nudge', {}, { answered: [`nudge-${s.ctx.now.getFullYear()}-${s.ctx.now.getMonth() + 1}-${s.ctx.now.getDate()}`] }).nudge).toBeUndefined()
+  })
+  it('never nudges a dish today rules out', () => {
+    const m = home('nudge', { vegDays: [{ day: 2, source: 'told', confirmed: true, evidence: 0 }] })
+    expect(m.nudge?.pick.dish.diet).toBe('veg')
+  })
+})
+
+describe('weather can be switched off', () => {
+  it('drops the rain line and rain reasons', () => {
+    const m = home('dinner-rain', { useWeather: false })
+    expect(m.line).not.toMatch(/rain/i)
+    expect(all(m).some(x => x.reasons.includes('warm for the rain'))).toBe(false)
+  })
+})

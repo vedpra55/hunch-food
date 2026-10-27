@@ -2,12 +2,13 @@ import { CaretRightIcon, CheckCircleIcon, MinusIcon, PlusIcon, ShoppingBagIcon, 
 import { motion } from 'motion/react'
 import { useState, type ReactNode } from 'react'
 import type { CheckoutStatus, Order, OrderStatus } from '../../chat/useConversation'
-import { paymentById, type Address, type PaymentMethod } from '../../data/account'
+import { addressIcon, paymentById, type Address, type PaymentMethod } from '../../data/account'
 import { DISH_BY_ID } from '../../data/menu'
 import { RESTAURANT_BY_ID } from '../../data/restaurants'
 import { totals, type CartLine, type Plan } from '../../domain/chat'
-import { money, ORDER } from '../../domain/copy'
+import { money, NUDGE, ORDER } from '../../domain/copy'
 import { delivery, type BetterDeal } from '../../domain/orders'
+import { clockLabel } from '../../domain/time'
 import type { Ask, HomeModel, IconKey, Prompt, Suggestion } from '../../domain/types'
 import { spring } from '../../design/motion'
 import { cn } from '../../lib/cn'
@@ -38,16 +39,24 @@ export interface TodayCardProps {
   onPrompt: (p: Prompt) => void
   onContext: () => void
   onAnswer: (ask: Ask, yes: boolean) => void
+  onSchedule: () => void
+  onNotTonight: () => void
 }
 
-export function TodayCard({ home, order, orderActions, onOpen, onOrder, onPrompt, onContext, onAnswer }: TodayCardProps) {
+export function TodayCard({ home, order, orderActions, onOpen, onOrder, onPrompt, onContext, onAnswer, onSchedule, onNotTonight }: TodayCardProps) {
   const hasRules = home.context.some(c => c.rule)
   return (
     <HunchCard className="gap-5 p-5">
       <ContextRow home={home} onClick={hasRules ? onContext : undefined} />
       <h1 className="text-[22px] font-semibold leading-7 tracking-[-0.015em] text-balance">{home.line}</h1>
 
-      {order ? <OrderBlock o={order} actions={orderActions} /> : home.pick && <PickRow s={home.pick} usual={home.pick === home.usual} onOpen={onOpen} onOrder={onOrder} />}
+      {order ? (
+        <OrderBlock o={order} actions={orderActions} />
+      ) : home.nudge ? (
+        <NudgeRow s={home.nudge.pick} at={clockLabel(home.nudge.at)} onOpen={onOpen} onSchedule={onSchedule} onOrderNow={() => onOrder(home.nudge!.pick)} onNotTonight={onNotTonight} />
+      ) : (
+        home.pick && <PickRow s={home.pick} usual={home.pick === home.usual} onOpen={onOpen} onOrder={onOrder} />
+      )}
 
       <div className="grid gap-0.5">
         <span className="pb-1 text-caption font-normal text-graphite-500">Or ask me</span>
@@ -125,6 +134,39 @@ function PickRow({ s, usual, onOpen, onOrder }: { s: Suggestion; usual: boolean;
           {s.opensLabel}
         </Button>
       )}
+    </div>
+  )
+}
+
+/** The proactive moment: the usual, offered for later. Scheduling is the main action; saying no is one tap. */
+function NudgeRow({ s, at, onOpen, onSchedule, onOrderNow, onNotTonight }: { s: Suggestion; at: string; onOpen: (s: Suggestion) => void; onSchedule: () => void; onOrderNow: () => void; onNotTonight: () => void }) {
+  return (
+    <div className="grid gap-3">
+      <button type="button" onClick={() => onOpen(s)} className="flex min-w-0 items-center gap-3.5 text-left">
+        <Photo slug={s.dish.id} alt="" px={80} className="size-[68px] shrink-0 rounded-[16px]" />
+        <div className="grid min-w-0 gap-0.5">
+          <span className="text-caption text-indigo-600">Your usual dinner</span>
+          <span className="flex min-w-0 items-center gap-1.5 text-[15px] font-semibold leading-5">
+            <VegMark veg={s.dish.diet === 'veg'} />
+            <span className="truncate">{s.dish.name}</span>
+          </span>
+          <span className="truncate text-[13px] tabular-nums text-graphite-600">
+            {s.restaurant.name} · {money(s.dish.price)}
+          </span>
+          {s.customisation && <span className="truncate text-caption font-normal text-graphite-500">{s.customisation.join(' · ')}</span>}
+        </div>
+      </button>
+      <Button block size="lg" onClick={onSchedule}>
+        {NUDGE.schedule(at)}
+      </Button>
+      <div className="flex justify-center gap-2">
+        <Button size="sm" variant="text" onClick={onOrderNow}>
+          Order now
+        </Button>
+        <Button size="sm" variant="text" onClick={onNotTonight}>
+          {NUDGE.notTonight}
+        </Button>
+      </div>
     </div>
   )
 }
@@ -306,6 +348,9 @@ export interface CheckoutCardProps {
   deal?: BetterDeal
   saved?: { place: string; saving: number }
   error?: string
+  scheduleAt?: string
+  /** "Just this once" is on for this order */
+  justOnce?: boolean
   address: Address
   payment: PaymentMethod
   onQty: (dishId: CartLine['dishId'], delta: number) => void
@@ -317,12 +362,16 @@ export interface CheckoutCardProps {
   onNotNow: () => void
 }
 
-export function CheckoutCard({ lines, status, deal, saved, error, address, payment, onQty, onSwitch, onKeep, onAddress, onPayment, onPay, onNotNow }: CheckoutCardProps) {
+export function CheckoutCard({ lines, status, deal, saved, error, scheduleAt, justOnce, address, payment, onQty, onSwitch, onKeep, onAddress, onPayment, onPay, onNotNow }: CheckoutCardProps) {
   const t = totals(lines)
   const { etaMin, unreachable } = delivery(lines, address)
   const [details, setDetails] = useState(false)
   const editable = status === 'open' || status === 'failed'
-  const title = t.restaurants.length === 1 ? `Placing your order at ${t.restaurants[0].name}` : `Placing your order from ${t.restaurants.length} kitchens`
+  const title = scheduleAt
+    ? `Dinner from ${t.restaurants[0].name}, at ${clockLabel(scheduleAt)}`
+    : t.restaurants.length === 1
+      ? `Placing your order at ${t.restaurants[0].name}`
+      : `Placing your order from ${t.restaurants.length} kitchens`
 
   if (status === 'paid') {
     return (
@@ -374,7 +423,8 @@ export function CheckoutCard({ lines, status, deal, saved, error, address, payme
       <Lines lines={lines} onQty={editable ? onQty : undefined} />
 
       <div className="grid gap-2">
-        <Row icon={address.id === 'work' ? 'briefcase' : 'home'} label={`Deliver to ${address.label}`} value={`${address.line} · ${etaMin} min`} onClick={editable ? onAddress : undefined} alert={unreachable.length > 0} />
+        {/* The time sits with the label so a long address never hides it. */}
+        <Row icon={addressIcon(address)} label={`Deliver to ${address.label} · ${scheduleAt ? `at ${clockLabel(scheduleAt)}` : `${etaMin} min`}`} value={address.line} onClick={editable ? onAddress : undefined} alert={unreachable.length > 0} />
         <Row icon={payment.icon} label="Pay with" value={`${payment.label} ${payment.detail}`} onClick={editable ? onPayment : undefined} alert={status === 'failed'} />
       </div>
 
@@ -417,7 +467,10 @@ export function CheckoutCard({ lines, status, deal, saved, error, address, payme
               Not now
             </Button>
           )}
-          <span className="text-center text-caption font-normal text-graphite-400">{payment.cash ? ORDER.cashNote(t.toPay) : 'Razorpay · test mode'}</span>
+          <span className="text-center text-caption font-normal text-graphite-400">
+            {justOnce ? `${ORDER.justOnce} · ` : ''}
+            {payment.cash ? ORDER.cashNote(t.toPay) : 'Razorpay · test mode'}
+          </span>
         </div>
       )}
     </HunchCard>
@@ -427,7 +480,7 @@ export function CheckoutCard({ lines, status, deal, saved, error, address, payme
 // ---------- tracking ----------
 
 const STEPS = ['Confirmed', 'Cooking', 'On the way', 'Delivered']
-const STEP_OF: Record<OrderStatus, number> = { cooking: 1, picked: 2, near: 2, delivered: 3, cancelled: 0 }
+const STEP_OF: Record<OrderStatus, number> = { scheduled: 0, cooking: 1, picked: 2, near: 2, delivered: 3, cancelled: 0 }
 
 export interface OrderActions {
   onAskCancel: (orderId: string, yes: boolean) => void
@@ -439,8 +492,11 @@ export interface OrderActions {
 function OrderBlock({ o, actions }: { o: Order; actions: OrderActions }) {
   const method = paymentById(o.paymentId)
   const step = STEP_OF[o.status]
+  const cancellable = o.status === 'cooking' || o.status === 'scheduled'
   const caption =
-    o.status === 'cooking'
+    o.status === 'scheduled'
+      ? NUDGE.caption(o.restaurant.name, o.startsAt ?? '')
+      : o.status === 'cooking'
       ? o.kitchens > 1
         ? ORDER.caption.cookingMany(o.kitchens)
         : ORDER.caption.cooking(o.restaurant.name)
@@ -469,6 +525,11 @@ function OrderBlock({ o, actions }: { o: Order; actions: OrderActions }) {
               <span className="text-caption font-normal text-graphite-500">{o.restaurant.name}</span>
               <span className="text-[22px] font-semibold leading-8 tracking-[-0.02em]">{ORDER.caption.delivered(o.deliveredAt ?? '')}</span>
             </>
+          ) : o.status === 'scheduled' ? (
+            <>
+              <span className="text-caption font-normal text-graphite-500">Arriving at</span>
+              <span className="text-[26px] font-semibold leading-8 tracking-[-0.02em] tabular-nums">{o.arrivesAt}</span>
+            </>
           ) : (
             <>
               <span className="text-caption font-normal text-graphite-500">{o.status === 'near' ? 'Arriving' : 'Arriving in'}</span>
@@ -486,7 +547,7 @@ function OrderBlock({ o, actions }: { o: Order; actions: OrderActions }) {
       {caption && (
         <div className="flex items-center justify-between gap-3">
           <span className="text-label font-normal text-graphite-700">{caption}</span>
-          {o.status === 'cooking' && !o.confirmingCancel && (
+          {cancellable && !o.confirmingCancel && (
             <Button size="sm" variant="text" onClick={() => actions.onAskCancel(o.id, true)}>
               Cancel order
             </Button>
@@ -494,7 +555,7 @@ function OrderBlock({ o, actions }: { o: Order; actions: OrderActions }) {
         </div>
       )}
 
-      {o.status === 'cooking' && o.confirmingCancel && (
+      {cancellable && o.confirmingCancel && (
         <div className="grid gap-3 rounded-[16px] bg-graphite-50 p-3.5">
           <p className="text-label font-normal text-graphite-800">{ORDER.cancelAsk(o.amount, !!method.cash)}</p>
           <div className="flex gap-2">

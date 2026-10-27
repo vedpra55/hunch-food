@@ -130,6 +130,31 @@ export interface UserProfile {
   /** Typical spend per meal, learned */
   priceComfort: number
   orderCount: number
+  /** false only before the three onboarding taps; missing means done */
+  onboarded?: boolean
+  /** When they usually eat, learned from orders: "20:30" */
+  mealTimes?: Partial<Record<Meal, string>>
+  /** The one proactive moment a day (HOME_SPEC §7) */
+  nudge?: { on: boolean; at: string }
+  /** Context: weather can be switched off in Profile */
+  useWeather?: boolean
+  /** Past orders, newest first */
+  history?: PastOrder[]
+}
+
+export interface PastLine {
+  dishId: DishId
+  qty: number
+  customisation?: string[]
+}
+
+export interface PastOrder {
+  id: string
+  /** ISO local date-time */
+  at: string
+  lines: PastLine[]
+  amount: number
+  rating?: 'up' | 'down'
 }
 
 // ---------- the moment ----------
@@ -156,6 +181,8 @@ export interface Context {
   /** Ask ids already answered */
   answered: string[]
   activeOrder?: ActiveOrder
+  /** Weather on its way, e.g. rain from 19:00 */
+  forecast?: { kind: Weather['kind']; at: string }
 }
 
 // ---------- what Home shows ----------
@@ -207,7 +234,7 @@ export type IconKey =
   | 'sun' | 'moon' | 'rain' | 'hot' | 'cold' | 'clock' | 'pin'
   | 'leaf' | 'lotus' | 'target' | 'barbell' | 'fire' | 'bowl'
   | 'coffee' | 'egg' | 'cake' | 'cookie' | 'shuffle' | 'moped' | 'tag' | 'chat'
-  | 'home' | 'briefcase' | 'phone' | 'card' | 'cash'
+  | 'home' | 'briefcase' | 'phone' | 'card' | 'cash' | 'bell' | 'receipt'
 
 /** One piece of the Today card's context row, e.g. CloudRain "Light rain". */
 export interface ContextItem {
@@ -236,4 +263,13 @@ export interface HomeModel {
   groups: Group[]
   prompts: Prompt[]
   tracking?: Tracking
+  /** The proactive moment: Hunch offers to line up the usual for later (HOME_SPEC §7) */
+  nudge?: Nudge
+}
+
+export interface Nudge {
+  id: string
+  /** Delivery time, "20:30" */
+  at: string
+  pick: Suggestion
 }

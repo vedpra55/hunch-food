@@ -4,7 +4,7 @@ import { DISH_BY_ID } from '../data/menu'
 import { RESTAURANT_BY_ID } from '../data/restaurants'
 import { SCENARIOS, scenarioById } from '../data/scenarios'
 import { parse, plan, search } from './chat'
-import { betterDeal, deliverable, delivery, etaTo } from './orders'
+import { betterDeal, deliverable, delivery, etaTo, kitchensReaching, reorder } from './orders'
 import { buildHome } from './recommend'
 
 const dinner = scenarioById('dinner-rain')
@@ -51,5 +51,26 @@ describe('sold out', () => {
     const r = search(parse('mutton biryani'), dinner.user, dinner.ctx)
     expect(r.items[0]?.dish.soldOut).toBeFalsy()
     for (const l of plan(parse('dinner for 4'), dinner.user, dinner.ctx).lines) expect(DISH_BY_ID[l.dishId].soldOut).toBeFalsy()
+  })
+})
+
+describe('reorder', () => {
+  const past = (lines: { dishId: 'mutton-biryani' | 'gulab-jamun' | 'chicken-biryani'; qty: number }[]) => ({ id: 'p', at: '2026-10-24T21:00:00', lines, amount: 0 })
+  it('drops what is sold out and names it', () => {
+    const r = reorder(past([{ dishId: 'mutton-biryani', qty: 1 }, { dishId: 'gulab-jamun', qty: 2 }]), dinner.user, dinner.ctx)
+    expect(r.lines).toEqual([{ dishId: 'gulab-jamun', qty: 2, customisation: undefined }])
+    expect(r.missing.map(m => [m.dish.id, m.why])).toEqual([['mutton-biryani', 'soldOut']])
+  })
+  it("respects today's rules", () => {
+    const veg = scenarioById('veg-day')
+    expect(reorder(past([{ dishId: 'chicken-biryani', qty: 1 }]), veg.user, veg.ctx).lines).toEqual([])
+  })
+})
+
+describe('adding an address', () => {
+  it('counts the kitchens that reach it', () => {
+    expect(kitchensReaching(0)).toBe(12)
+    expect(kitchensReaching(12)).toBe(0)
+    expect(kitchensReaching(5.5)).toBeLessThan(12)
   })
 })

@@ -272,3 +272,35 @@ One checkout card per order attempt. It lives in the thread, so every change hap
 
 ### Not in this pass
 Support / report an issue, voice and language.
+
+---
+
+## 7. The person: onboarding, profile, history, the evening nudge
+
+### Onboarding (first open)
+- One card, three taps, one question at a time: **What do you eat?** (Everything · Veg, plus eggs · Vegetarian · Jain · Vegan) → **Anything you can't have?** (Dairy · Gluten · Nuts · Egg · Soy, or `Nothing`) → **Working towards anything?** (Eating light · More protein · Cutting · Spending less, or `Not right now`).
+- `Skip` on step one, `Back` after. No default is highlighted.
+- Never asks about veg days, festivals or fasting: those are learned, then confirmed (§3).
+- Answered, the card folds into one line ("Vegetarian · no nuts · Eating light") plus "Change anything later in your profile.", then Hunch says "Got it. Eating light until 26 Nov." and the Today card appears. Goals always end: 30 days.
+
+### Profile → What Hunch knows (the left button)
+Opens from the left, over the conversation, in the same centred column. Order of sections:
+1. **Your orders**: last 3 (`Show all 5`), each with photo, dish (+ n more), restaurant, date · amount, rating mark and `Reorder`.
+2. **What Hunch knows**: Food rules (diet · can't have · veg days · fasting), Goal, Favourites (usuals with order counts, places, not-for-me with `Undo`), Habits (spice, usual spend, when you eat). Every item shows its source: *You told me* · *Learned from 38 orders* · *Noticed 3 weeks in a row*. A noticed veg day is dashed until tapped.
+3. **Suggestions**: Evening nudge on/off, time 5 · 6 · 7 pm.
+4. **Context**: Use the weather on/off (off: no weather lines, reasons or forecasts). "Location is used only while the app is open."
+5. **Addresses** (+ `Add address`) and **Payments**.
+6. **Privacy**: `Just this once` (the next order changes nothing Hunch knows; shown under Pay) · `Forget what I learned` (inline confirm; keeps what you told me).
+
+### Add address
+From the address sheet or Profile. `Use where I am` · Area chips · Flat, building, street · Save as Home / Work / Other (taken labels are disabled). Reach shows as soon as an area is picked: "Every kitchen delivers here." / "5 of 12 kitchens deliver here." / "No kitchens reach Whitefield yet. You can still save it." `Save and deliver here` selects it.
+
+### Reorder
+- `Reorder` in Profile, or say "repeat my last order" / "same as last time".
+- The past order is rebuilt as it can be ordered **today**: sold out, closed and rule-breaking dishes drop out, each with one reason: "Mutton Biryani is sold out today, so I left it out." · "Nawab's Kitchen opens at 12 pm. Want something that's open now?"
+
+### The evening nudge (one proactive moment a day)
+- **When**: inside the user's window (default 6 pm, for 90 min), only with a pattern (a dinner usual and a usual dinner time), not in the 45 min before dinner, never during a live order, once a day, and never for a dish today's rules forbid.
+- **Arrives** as a notification: "Rain from 7 pm. Chicken Dum Biryani by 8:30 pm?" It leaves on its own after 5 s.
+- **Today card**: "Rain from 7 pm. Dinner here by 8:30 pm, before the rush?" (no forecast: "Dinner around 8:30 pm, like usual? I can line it up."), the usual, `Schedule for 8:30 pm` · `Order now` · `Not tonight` ("Okay. I'll stay quiet tonight.").
+- **Scheduled**: checkout says "Dinner from Nawab's Kitchen, at 8:30 pm", no deal switching. Tracking shows "Arriving at **8:30 pm**", "Scheduled. Nawab's Kitchen starts at 7:55 pm", top bar "Scheduled · 8:30 pm"; cancel is free until the kitchen starts.
