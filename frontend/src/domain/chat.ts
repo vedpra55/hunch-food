@@ -132,9 +132,11 @@ export function search(intent: Intent, user: UserProfile, ctx: Context): Results
   // Respect the time of day unless they named a dish: no dosa at 8 pm for "something warm".
   const inMeal = intent.terms.length ? items : items.filter(c => c.dish.meals.includes(s.meal))
   const pool = inMeal.length ? inMeal : items
-  const sorted = pool.sort((a, b) => (intent.protein ? b.dish.proteinG - a.dish.proteinG : 0) || b.score - a.score)
+  // Sold out today stays visible (so they know) but never leads.
+  const soldLast = (a: Suggestion, b: Suggestion) => Number(!!a.dish.soldOut) - Number(!!b.dish.soldOut)
+  const sorted = pool.sort((a, b) => soldLast(a, b) || (intent.protein ? b.dish.proteinG - a.dish.proteinG : 0) || b.score - a.score)
   const picked = diverse(sorted)
-  if (!picked.length) return { text: CHAT.results.none(intent.budget), items: [], refine: [] }
+  if (!picked.length || picked[0].dish.soldOut) return { text: CHAT.results.none(intent.budget), items: picked, refine: CHAT.results.relax(intent.budget) }
   return reply(picked, intent)
 }
 
@@ -191,7 +193,7 @@ export function plan(intent: Intent, user: UserProfile, ctx: Context): Plan {
   const people = intent.people ?? 2
   const budget = intent.budget ?? 350 * people
   const s = signals(user, ctx)
-  const mains = allowedSuggestions(s).filter(c => c.open && isMain(c) && (!intent.veg || c.dish.diet === 'veg') && matchesTerms(c, intent.terms))
+  const mains = allowedSuggestions(s).filter(c => c.open && !c.dish.soldOut && isMain(c) && (!intent.veg || c.dish.diet === 'veg') && matchesTerms(c, intent.terms))
 
   const byPlace = new Map<string, Suggestion[]>()
   for (const c of mains) byPlace.set(c.restaurant.id, [...(byPlace.get(c.restaurant.id) ?? []), c])

@@ -187,7 +187,7 @@ Trust rules: today-only overrides reset at midnight · every item shows its sour
 | Veg day | Leaf Veg day | "Thursday, so all veg today." | Veg usual | Leaf Paneer, not too heavy · BowlFood South Indian · Shuffle Surprise me |
 | Fasting | FlowerLotus Navratri · day 3 | "Navratri, day 3. All fasting-friendly today." | Best fit | BowlFood Vrat thali · Cake Something sweet · Leaf Fruit, no sugar |
 | Late night | Moon · 12:40 am | "Still up? These are open late." | Best open fit | Cookie Light snack · Cake Dessert · Coffee Chai |
-| Order on its way | Moon · 8:40 pm | "On its way from Nawab's Kitchen." | Tracking block (the ETA appears here, once) | Moped Where's my rider? · Coffee Add a drink · ChatCircle Report an issue |
+| Order on its way | Moon · 8:40 pm | "On its way from Nawab's Kitchen." | Tracking block (the ETA appears here, once) | Moped Where's my rider? · Coffee Add a drink · Cake Add dessert |
 
 Line priority (first that applies wins): **order on its way › fasting › veg day › first visit › weather (blended with goal) › meal slot**.
 
@@ -225,3 +225,50 @@ Reply: "{Dish} from {Restaurant}, {reason 1}. {Reason 2} too." Sheet: "{Reason 1
 
 ### Buttons and actions
 `Order again · ₹289` · `Order · ₹249` · `Add · ₹289` · `Pay ₹335` · `Not now` · `Remember` · `Not really` · `Not for me` · refine: `Only veg` · `Under ₹200` · `Here in 20 min`
+
+---
+
+## 6. Ordering: checkout, tracking, failures
+
+One checkout card per order attempt. It lives in the thread, so every change happens in place, never on a new screen.
+
+### Checkout card (top to bottom)
+1. **Better deal** (only when found): "Found a better deal" + "Same {kind} at {place}, ₹60 less." · `Switch and save ₹60` · `Keep mine`. Switching shows "Switched to {place}. You save ₹60."
+2. **Header**: "Placing your order at {restaurant}" (or "from 2 kitchens").
+3. **Lines**: photo, name (wraps to 2 lines), restaurant, stepper (trash at qty 1), price. Removing the last line empties it: "Your cart's empty. Want something else?"
+4. **Deliver to** row: label, address · ETA, `Change` → address sheet.
+5. **Pay with** row: method · masked number, `Change` → payment sheet.
+6. **To pay** total · `Pay ₹363` (cash: `Place order` + "Pay ₹363 at the door.") · `Not now`.
+
+### Deal rules
+- Same `kind` and same diet, at a different kitchen, open, in stock and reachable from the chosen address.
+- Saving ≥ ₹30 after delivery fees and offers. Show the biggest one, once.
+- Recomputed when quantities or the address change; gone once paid or dismissed.
+
+### Address and payment
+- Address sheet: Home · Work · Parents'. A place that can't reach a cart kitchen shows in red: "{kitchen} doesn't deliver here".
+- Reach: kitchen distance + address extra ≤ 7 km. ETA grows 3 min per extra km.
+- Payment sheet: GPay, PhonePe, HDFC card, Cash on delivery. Choosing a method clears a payment error.
+
+### Failure states
+| Failure | Where | Copy | Way out |
+|---|---|---|---|
+| Out of reach | Address row turns red, Pay disabled | "{kitchen} doesn't deliver to {area}. Change the address, or ask me for something nearby." | `Change` |
+| Payment declined | Pay row turns red | "Payment didn't go through. GPay declined it. Try again, or pay another way." | `Try again` · `Change` |
+| Sold out | Tile and sheet | "Sold out today", Add disabled, never picked or suggested | — |
+| No match | Reply card | "Nothing open fits that right now. Try something close?" | `Anything good nearby` |
+| Empty cart | Checkout card | "Your cart's empty. Want something else?" | — |
+
+### Live tracking
+- After paying: "Paid · {restaurant} ₹129" receipt, then a tracking card: "Done. I'll tell you when it's close."
+- Block: dish photo, "Arriving in **14 min**", four-step bar (placed · cooking · picked up · near), one caption: "{restaurant} is cooking" → "{rider} picked it up" → "Arriving now" → "Delivered at 8:45 pm".
+- The Today card's line becomes "On its way from {restaurant}." and the top bar status shows "On the way · 14 min". The ETA is shown big only once.
+- Picked up at ≤ 55% of the ETA left; near at ≤ 3 min.
+
+### Cancel and rate
+- `Cancel order` while cooking only. Inline confirm, no dialog: "Cancel this order? You get ₹129 back." · `Cancel order` · `Keep it`.
+- Cancelled: "Cancelled. ₹129 is on its way back to GPay ••4821, usually in 2–3 days." Cash: "Cancelled. Nothing to pay."
+- After delivery: "How was it?" · `Loved it` (Hunch learns it as a usual) · `Not great` (never suggested again).
+
+### Not in this pass
+Support / report an issue, voice and language.

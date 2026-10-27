@@ -3,6 +3,7 @@ import type { Restaurant } from '../domain/types'
 // Fictional kitchens around Indiranagar, Bengaluru. Numbers are realistic, not real.
 export const RESTAURANTS: Restaurant[] = [
   { id: 'nawabs', name: "Nawab's Kitchen", cuisine: 'Biryani, Mughlai', area: 'Indiranagar', distanceKm: 1.8, rating: 4.6, ratingCount: 2140, opens: '12:00', closes: '23:30', etaMin: 32, deliveryFee: 0, pureVeg: false },
+  { id: 'deccan', name: 'Deccan Dum', cuisine: 'Biryani, Hyderabadi', area: 'Domlur', distanceKm: 2.6, rating: 4.4, ratingCount: 1680, opens: '12:00', closes: '23:30', etaMin: 30, deliveryFee: 0, pureVeg: false },
   { id: 'angithi', name: 'Angithi Dhaba', cuisine: 'North Indian', area: 'HAL 2nd Stage', distanceKm: 2.4, rating: 4.5, ratingCount: 3410, opens: '11:30', closes: '23:00', etaMin: 28, deliveryFee: 0, pureVeg: false },
   { id: 'tandoor', name: 'Tandoor Street', cuisine: 'Kebabs, Tandoor', area: 'Indiranagar', distanceKm: 1.2, rating: 4.4, ratingCount: 980, opens: '12:00', closes: '23:00', etaMin: 26, deliveryFee: 25, pureVeg: false },
   { id: 'fitbowl', name: 'FitBowl Co.', cuisine: 'Healthy, Bowls', area: 'Indiranagar', distanceKm: 0.9, rating: 4.5, ratingCount: 1220, opens: '08:00', closes: '22:00', etaMin: 22, deliveryFee: 0, pureVeg: false },

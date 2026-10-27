@@ -45,7 +45,7 @@ export const PROMPTS = {
   snack: [p('cake', 'Something sweet'), p('coffee', 'Chai'), SURPRISE],
   dinner: [p('leaf', 'Something lighter'), p('barbell', 'High protein, under ₹300'), SURPRISE],
   late: [p('cookie', 'Light snack'), p('cake', 'Dessert'), p('coffee', 'Chai')],
-  tracking: [p('moped', "Where's my rider?"), p('coffee', 'Add a drink'), p('chat', 'Report an issue')],
+  tracking: [p('moped', "Where's my rider?"), p('coffee', 'Add a drink'), p('cake', 'Add dessert')],
 } satisfies Record<string, Prompt[]>
 
 /** Refine a reply with one tap. */
@@ -111,6 +111,8 @@ export const CHAT = {
       return `${dish} from ${place}, ${why[0]}.${too}`
     },
     none: (budget?: number) => (budget ? `Nothing open under ${money(budget)}. Try a little more?` : `Nothing open fits that right now. Try something close?`),
+    /** One-tap ways out of an empty answer */
+    relax: (budget?: number): Prompt[] => (budget ? [p('tag', `Under ${money(budget + 100)}`)] : [p('shuffle', 'Anything good nearby')]),
   },
   plan: {
     ready: (people: number, place: string, total: number, each: number) => `Dinner for ${people} from ${place}: ${money(total)}, ${money(each)} each.`,
@@ -142,13 +144,34 @@ export const CHAT = {
     'too-pricey': () => `Noted. I'll keep it cheaper.`,
     'not-this-place': (place: string) => `Noted. I'll skip ${place}.`,
     'not-today': () => `Noted. Not today.`,
+    disliked: () => `Noted. I'll skip it next time.`,
   },
   track: (eta: number, rider: string) => `${rider} is ${eta} min away.`,
-  support: () => `I'm on it. What went wrong?`,
   change: () => `Tell me what to change.`,
   /** What the simulated mic "hears" */
   heard: { dinner: 'Something warm, not too heavy', default: 'Something quick under ₹250' },
 } as const
 
-export const ADDRESS = 'Home · 12th Main, Indiranagar'
-export const PAYMENT = 'UPI · GPay ••4821'
+/** Ordering after the order: offers, payment, tracking, cancelling, rating. */
+export const ORDER = {
+  offer: (kind: string, place: string, saving: number) => `Same ${kind} at ${place}, ${money(saving)} less.`,
+  offerSwitch: (saving: number) => `Switch and save ${money(saving)}`,
+  switched: (place: string, saving: number) => `Switched to ${place}. You save ${money(saving)}.`,
+  unreachable: (place: string, area: string) => `${place} doesn't deliver to ${area}.`,
+  payFailed: (method: string) => `Payment didn't go through. ${method} declined it. Try again, or pay another way.`,
+  cashNote: (amount: number) => `Pay ${money(amount)} at the door.`,
+  emptyCart: () => `Your cart's empty. Want something else?`,
+  soldOut: 'Sold out today',
+  caption: {
+    cooking: (place: string) => `${place} is cooking`,
+    cookingMany: (n: number) => (n === 2 ? 'Both kitchens are cooking' : `All ${n} kitchens are cooking`),
+    picked: (rider: string) => `${rider} picked it up`,
+    near: (rider: string) => `${rider} is around the corner`,
+    delivered: (time: string) => `Delivered at ${time}`,
+  },
+  cancelAsk: (amount: number, cash: boolean) => (cash ? `Cancel this order? Nothing to pay.` : `Cancel this order? You get ${money(amount)} back.`),
+  cancelled: (amount: number, method: string, cash: boolean) => (cash ? `Cancelled. Nothing to pay.` : `Cancelled. ${money(amount)} is on its way back to ${method}, usually in 2–3 days.`),
+  rateAsk: 'How was it?',
+  rated: { up: `Glad you liked it. I'll remember.`, down: `Noted. I'll steer you away from it next time.` },
+  status: { near: 'Arriving now', delivered: 'Delivered' },
+}

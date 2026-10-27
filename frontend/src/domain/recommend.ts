@@ -188,8 +188,8 @@ function reasons(d: Dish, r: Restaurant, s: Signals): string[] {
 function pickUsual(candidates: Suggestion[], s: Signals): Suggestion | undefined {
   const fits = (c: Suggestion) => {
     const u = s.usuals.get(c.dish.id)
-    // A drink goes with a meal; it is never the meal.
-    if (!u || has(c, 'drink')) return false
+    // A drink goes with a meal; it is never the meal. Sold out today can't be "your usual" either.
+    if (!u || has(c, 'drink') || c.dish.soldOut) return false
     if (u.meal !== s.meal && !c.dish.meals.includes(s.meal)) return false
     // Late at night a closed usual is just noise.
     return s.meal !== 'late' || c.open
@@ -266,7 +266,7 @@ function pickGroups(candidates: Suggestion[], s: Signals, usual?: Suggestion): G
     // While a veg pattern is unconfirmed, veg leads every row; non-veg stays available after it.
     const vegFirst = (a: Suggestion, b: Suggestion) => (s.inferredVeg ? Number(b.dish.diet === 'veg') - Number(a.dish.diet === 'veg') : 0)
     const items = candidates
-      .filter(c => c.open && c.dish.meals.includes(s.meal) && !used.has(c.dish.id) && def.test(c))
+      .filter(c => c.open && !c.dish.soldOut && c.dish.meals.includes(s.meal) && !used.has(c.dish.id) && def.test(c))
       .sort((a, b) => vegFirst(a, b) || rank(a, b))
       .filter(c => {
         const n = perPlace.get(c.restaurant.id) ?? 0

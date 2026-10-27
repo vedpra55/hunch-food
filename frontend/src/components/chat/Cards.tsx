@@ -1,10 +1,14 @@
-import { CaretRightIcon, CheckCircleIcon, CreditCardIcon, MapPinIcon, ShoppingBagIcon, SparkleIcon } from '@phosphor-icons/react'
+import { CaretRightIcon, CheckCircleIcon, MinusIcon, PlusIcon, ShoppingBagIcon, SparkleIcon, ThumbsDownIcon, ThumbsUpIcon, TrashIcon, WarningCircleIcon, XCircleIcon } from '@phosphor-icons/react'
 import { motion } from 'motion/react'
 import { useState, type ReactNode } from 'react'
+import type { CheckoutStatus, Order, OrderStatus } from '../../chat/useConversation'
+import { paymentById, type Address, type PaymentMethod } from '../../data/account'
 import { DISH_BY_ID } from '../../data/menu'
+import { RESTAURANT_BY_ID } from '../../data/restaurants'
 import { totals, type CartLine, type Plan } from '../../domain/chat'
-import { ADDRESS, money, PAYMENT } from '../../domain/copy'
-import type { Ask, HomeModel, Prompt, Suggestion, Tracking } from '../../domain/types'
+import { money, ORDER } from '../../domain/copy'
+import { delivery, type BetterDeal } from '../../domain/orders'
+import type { Ask, HomeModel, IconKey, Prompt, Suggestion } from '../../domain/types'
 import { spring } from '../../design/motion'
 import { cn } from '../../lib/cn'
 import { Button } from '../ui/Button'
@@ -26,7 +30,9 @@ function Say({ children }: { children: ReactNode }) {
 
 export interface TodayCardProps {
   home: HomeModel
-  trackingStep?: number
+  /** The live order when the stage opens mid-delivery */
+  order?: Order
+  orderActions: OrderActions
   onOpen: (s: Suggestion) => void
   onOrder: (s: Suggestion) => void
   onPrompt: (p: Prompt) => void
@@ -34,14 +40,14 @@ export interface TodayCardProps {
   onAnswer: (ask: Ask, yes: boolean) => void
 }
 
-export function TodayCard({ home, trackingStep = 2, onOpen, onOrder, onPrompt, onContext, onAnswer }: TodayCardProps) {
+export function TodayCard({ home, order, orderActions, onOpen, onOrder, onPrompt, onContext, onAnswer }: TodayCardProps) {
   const hasRules = home.context.some(c => c.rule)
   return (
     <HunchCard className="gap-5 p-5">
       <ContextRow home={home} onClick={hasRules ? onContext : undefined} />
       <h1 className="text-[22px] font-semibold leading-7 tracking-[-0.015em] text-balance">{home.line}</h1>
 
-      {home.tracking ? <TrackingBlock t={home.tracking} step={trackingStep} /> : home.pick && <PickRow s={home.pick} usual={home.pick === home.usual} onOpen={onOpen} onOrder={onOrder} />}
+      {order ? <OrderBlock o={order} actions={orderActions} /> : home.pick && <PickRow s={home.pick} usual={home.pick === home.usual} onOpen={onOpen} onOrder={onOrder} />}
 
       <div className="grid gap-0.5">
         <span className="pb-1 text-caption font-normal text-graphite-500">Or ask me</span>
@@ -141,7 +147,7 @@ export function ReplyCard({ text, items, refine, onOpen, onRefine }: { text: str
   return (
     <HunchCard>
       <Say>{text}</Say>
-      {items.length > 0 && <TileRow items={items} onOpen={onOpen} />}
+      {items.length > 0 && <TileRow items={items} onOpen={onOpen} pickFirst={!items[0].dish.soldOut} />}
       {refine.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {refine.map(p => (
@@ -157,11 +163,11 @@ export function ReplyCard({ text, items, refine, onOpen, onRefine }: { text: str
 }
 
 /** Tiles scroll inside the card; the first is Hunch's pick. */
-function TileRow({ items, onOpen }: { items: Suggestion[]; onOpen: (s: Suggestion) => void }) {
+function TileRow({ items, onOpen, pickFirst = true }: { items: Suggestion[]; onOpen: (s: Suggestion) => void; pickFirst?: boolean }) {
   return (
     <div className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       {items.map((s, i) => (
-        <Tile key={s.dish.id} s={s} pick={i === 0} onOpen={onOpen} />
+        <Tile key={s.dish.id} s={s} pick={pickFirst && i === 0} onOpen={onOpen} />
       ))}
     </div>
   )
@@ -175,7 +181,7 @@ export function Tile({ s, pick, onOpen }: { s: Suggestion; pick?: boolean; onOpe
       whileTap={{ scale: 0.97 }}
       transition={spring.snappy}
       aria-label={`${pick ? "Hunch's pick: " : ''}${s.dish.name} from ${s.restaurant.name}, ${money(s.dish.price)}, ${s.restaurant.etaMin} minutes`}
-      className={cn('grid w-[132px] shrink-0 snap-start content-start gap-2 text-left', !s.open && 'opacity-60')}
+      className={cn('grid w-[132px] shrink-0 snap-start content-start gap-2 text-left', (!s.open || s.dish.soldOut) && 'opacity-55')}
     >
       <div className="relative">
         <Photo slug={s.dish.id} alt="" px={140} className="aspect-square w-full rounded-[14px]" />
@@ -192,7 +198,7 @@ export function Tile({ s, pick, onOpen }: { s: Suggestion; pick?: boolean; onOpe
           {s.dish.name}
         </span>
         <span className="truncate text-[12px] leading-4 text-graphite-600">{s.restaurant.name}</span>
-        <span className="text-[12px] leading-4 tabular-nums text-graphite-500">{s.open ? `${money(s.dish.price)} · ${s.restaurant.etaMin} min` : s.opensLabel}</span>
+        <span className="text-[12px] leading-4 tabular-nums text-graphite-500">{s.dish.soldOut ? ORDER.soldOut : s.open ? `${money(s.dish.price)} · ${s.restaurant.etaMin} min` : s.opensLabel}</span>
       </div>
     </motion.button>
   )
@@ -200,7 +206,7 @@ export function Tile({ s, pick, onOpen }: { s: Suggestion; pick?: boolean; onOpe
 
 // ---------- order lines (plan and checkout) ----------
 
-function Lines({ lines }: { lines: CartLine[] }) {
+function Lines({ lines, onQty }: { lines: CartLine[]; onQty?: (dishId: CartLine['dishId'], delta: number) => void }) {
   return (
     <ul className="grid gap-2.5">
       {lines.map(l => {
@@ -209,13 +215,28 @@ function Lines({ lines }: { lines: CartLine[] }) {
           <li key={l.dishId} className="flex min-w-0 items-center gap-3">
             <Photo slug={d.id} alt="" px={48} className="size-11 shrink-0 rounded-[10px]" />
             <div className="grid min-w-0 flex-1">
-              <span className="truncate text-label font-medium">
-                {l.qty > 1 && <span className="tabular-nums text-graphite-500">{l.qty}× </span>}
+              <span className="line-clamp-2 text-label leading-5 font-medium">
+                {!onQty && l.qty > 1 && <span className="tabular-nums text-graphite-500">{l.qty}× </span>}
                 {d.name}
               </span>
-              {l.customisation?.length ? <span className="truncate text-caption font-normal text-graphite-500">{l.customisation.join(' · ')}</span> : null}
+              <span className="truncate text-caption font-normal tabular-nums text-graphite-500">
+                {[RESTAURANT_BY_ID[d.restaurantId].name, ...(l.customisation ?? [])].join(' · ')}
+              </span>
             </div>
-            <span className="text-label font-normal tabular-nums">{money(d.price * l.qty)}</span>
+            {onQty ? (
+              <div className="flex shrink-0 items-center gap-0.5 rounded-full bg-graphite-50 p-0.5">
+                <button type="button" onClick={() => onQty(l.dishId, -1)} aria-label={l.qty === 1 ? `Remove ${d.name}` : `One less ${d.name}`} className="grid size-7 place-items-center rounded-full text-graphite-700 hover:bg-white">
+                  {l.qty === 1 ? <TrashIcon size={14} /> : <MinusIcon size={14} />}
+                </button>
+                <span className="w-5 text-center text-label tabular-nums" aria-live="polite">
+                  {l.qty}
+                </span>
+                <button type="button" onClick={() => onQty(l.dishId, 1)} aria-label={`One more ${d.name}`} className="grid size-7 place-items-center rounded-full text-graphite-700 hover:bg-white">
+                  <PlusIcon size={14} />
+                </button>
+              </div>
+            ) : null}
+            <span className="w-14 shrink-0 text-right text-label font-normal tabular-nums">{money(d.price * l.qty)}</span>
           </li>
         )
       })}
@@ -223,15 +244,26 @@ function Lines({ lines }: { lines: CartLine[] }) {
   )
 }
 
-function Row({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
+/** A tappable row inside a card (address, payment). */
+function Row({ icon, label, value, onClick, alert }: { icon: IconKey; label: string; value: string; onClick?: () => void; alert?: boolean }) {
   return (
-    <div className="flex items-center gap-3 rounded-[14px] bg-graphite-50 px-3.5 py-2.5">
-      <span className="text-graphite-500">{icon}</span>
-      <div className="grid min-w-0">
+    <button type="button" onClick={onClick} disabled={!onClick} className={cn('flex w-full items-center gap-3 rounded-[14px] px-3.5 py-2.5 text-left transition-colors', alert ? 'bg-[#FDF1F0]' : 'bg-graphite-50 hover:enabled:bg-graphite-100')}>
+      <StageIcon icon={icon} size={18} className={alert ? 'text-error' : 'text-graphite-500'} />
+      <div className="grid min-w-0 flex-1">
         <span className="text-[12px] text-graphite-500">{label}</span>
         <span className="truncate text-label font-normal">{value}</span>
       </div>
-    </div>
+      {onClick && <span className="text-label text-indigo-600">Change</span>}
+    </button>
+  )
+}
+
+function ErrorLine({ children }: { children: ReactNode }) {
+  return (
+    <p role="alert" className="flex items-start gap-2 text-label font-normal leading-5 text-error">
+      <WarningCircleIcon size={18} className="mt-px shrink-0" />
+      <span>{children}</span>
+    </p>
   )
 }
 
@@ -268,18 +300,37 @@ export function PlanCard({ text, plan, ordered, onOrder, onChange }: { text: str
 
 // ---------- checkout (Hunch asks before it spends) ----------
 
-export type CheckoutStatus = 'open' | 'paying' | 'paid' | 'dismissed'
+export interface CheckoutCardProps {
+  lines: CartLine[]
+  status: CheckoutStatus
+  deal?: BetterDeal
+  saved?: { place: string; saving: number }
+  error?: string
+  address: Address
+  payment: PaymentMethod
+  onQty: (dishId: CartLine['dishId'], delta: number) => void
+  onSwitch: () => void
+  onKeep: () => void
+  onAddress: () => void
+  onPayment: () => void
+  onPay: () => void
+  onNotNow: () => void
+}
 
-export function CheckoutCard({ lines, status, onPay, onNotNow }: { lines: CartLine[]; status: CheckoutStatus; onPay: () => void; onNotNow: () => void }) {
+export function CheckoutCard({ lines, status, deal, saved, error, address, payment, onQty, onSwitch, onKeep, onAddress, onPayment, onPay, onNotNow }: CheckoutCardProps) {
   const t = totals(lines)
+  const { etaMin, unreachable } = delivery(lines, address)
   const [details, setDetails] = useState(false)
+  const editable = status === 'open' || status === 'failed'
   const title = t.restaurants.length === 1 ? `Placing your order at ${t.restaurants[0].name}` : `Placing your order from ${t.restaurants.length} kitchens`
 
   if (status === 'paid') {
     return (
       <div className="flex items-center gap-3 rounded-[20px] bg-white px-4 py-3 shadow-e1">
         <CheckCircleIcon size={20} weight="fill" className="text-indigo-500" />
-        <span className="min-w-0 flex-1 truncate text-label font-normal">Paid · {t.restaurants.map(r => r.name).join(', ')}</span>
+        <span className="min-w-0 flex-1 truncate text-label font-normal">
+          {payment.cash ? 'Ordered' : 'Paid'} · {t.restaurants.map(r => r.name).join(', ')}
+        </span>
         <span className="text-label font-normal tabular-nums">{money(t.toPay)}</span>
       </div>
     )
@@ -287,15 +338,53 @@ export function CheckoutCard({ lines, status, onPay, onNotNow }: { lines: CartLi
 
   return (
     <HunchCard className={cn('shadow-e2', status === 'dismissed' && 'opacity-60')}>
+      {/* Offer discovery: Hunch found the same thing cheaper while preparing checkout. */}
+      {deal && editable && (
+        <div className="grid gap-3 rounded-[16px] bg-indigo-50 p-3.5">
+          <div className="flex items-center gap-3">
+            <Photo slug={deal.to.dish.id} alt="" px={48} className="size-11 shrink-0 rounded-[10px]" />
+            <p className="min-w-0 flex-1 text-label font-normal text-graphite-800">
+              <span className="inline-flex items-center gap-1 font-medium text-indigo-700">
+                <SparkleIcon size={12} weight="fill" /> Found a better deal
+              </span>
+              <br />
+              {ORDER.offer(deal.to.dish.kind, deal.to.restaurant.name, deal.saving)}
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" variant="soft" className="bg-white" onClick={onSwitch}>
+              {ORDER.offerSwitch(deal.saving)}
+            </Button>
+            <Button size="sm" variant="text" onClick={onKeep}>
+              Keep mine
+            </Button>
+          </div>
+        </div>
+      )}
+      {saved && editable && (
+        <p className="flex items-center gap-2 rounded-[14px] bg-indigo-50 px-3.5 py-2.5 text-label font-normal text-indigo-700">
+          <CheckCircleIcon size={18} weight="fill" /> {ORDER.switched(saved.place, saved.saving)}
+        </p>
+      )}
+
       <div className="flex items-center gap-2.5">
         <ShoppingBagIcon size={20} className="text-graphite-700" />
         <span className="text-[15px] font-semibold">{title}</span>
       </div>
-      <Lines lines={lines} />
+      <Lines lines={lines} onQty={editable ? onQty : undefined} />
+
       <div className="grid gap-2">
-        <Row icon={<MapPinIcon size={18} />} label="Deliver to" value={ADDRESS} />
-        <Row icon={<CreditCardIcon size={18} />} label="Pay with" value={PAYMENT} />
+        <Row icon={address.id === 'work' ? 'briefcase' : 'home'} label={`Deliver to ${address.label}`} value={`${address.line} · ${etaMin} min`} onClick={editable ? onAddress : undefined} alert={unreachable.length > 0} />
+        <Row icon={payment.icon} label="Pay with" value={`${payment.label} ${payment.detail}`} onClick={editable ? onPayment : undefined} alert={status === 'failed'} />
       </div>
+
+      {unreachable.map(r => (
+        <ErrorLine key={r.id}>
+          {ORDER.unreachable(r.name, address.area)} Change the address, or ask me for something nearby.
+        </ErrorLine>
+      ))}
+      {error && <ErrorLine>{error}</ErrorLine>}
+
       <div className="grid gap-1.5">
         <button type="button" onClick={() => setDetails(d => !d)} className="flex items-baseline justify-between text-left" aria-expanded={details}>
           <span className="text-[15px] font-medium">
@@ -311,17 +400,24 @@ export function CheckoutCard({ lines, status, onPay, onNotNow }: { lines: CartLi
           </div>
         )}
       </div>
+
       {status !== 'dismissed' && (
         <div className="grid gap-2">
-          <Button size="lg" block onClick={onPay} disabled={status === 'paying'}>
-            {status === 'paying' ? 'Placing your order…' : <>Pay <span className="tabular-nums">{money(t.toPay)}</span></>}
+          <Button size="lg" block onClick={onPay} disabled={status === 'paying' || unreachable.length > 0}>
+            {status === 'paying' ? (
+              'Placing your order…'
+            ) : payment.cash ? (
+              <>Place order · <span className="tabular-nums">{money(t.toPay)}</span></>
+            ) : (
+              <>{status === 'failed' ? 'Try again' : 'Pay'} <span className="tabular-nums">{money(t.toPay)}</span></>
+            )}
           </Button>
-          {status === 'open' && (
+          {editable && (
             <Button size="lg" variant="secondary" block onClick={onNotNow}>
               Not now
             </Button>
           )}
-          <span className="text-center text-caption font-normal text-graphite-400">Razorpay · test mode</span>
+          <span className="text-center text-caption font-normal text-graphite-400">{payment.cash ? ORDER.cashNote(t.toPay) : 'Razorpay · test mode'}</span>
         </div>
       )}
     </HunchCard>
@@ -331,33 +427,112 @@ export function CheckoutCard({ lines, status, onPay, onNotNow }: { lines: CartLi
 // ---------- tracking ----------
 
 const STEPS = ['Confirmed', 'Cooking', 'On the way', 'Delivered']
+const STEP_OF: Record<OrderStatus, number> = { cooking: 1, picked: 2, near: 2, delivered: 3, cancelled: 0 }
 
-function TrackingBlock({ t, step }: { t: Tracking; step: number }) {
-  const caption = [`${t.restaurant.name} has your order`, `${t.restaurant.name} is cooking`, `${t.rider} picked it up`, 'Delivered'][step]
+export interface OrderActions {
+  onAskCancel: (orderId: string, yes: boolean) => void
+  onCancel: (orderId: string) => void
+  onRate: (orderId: string, rating: 'up' | 'down') => void
+}
+
+/** The live order: ETA counts down, steps advance, then delivered + a quick rating; or cancelled + refund. */
+function OrderBlock({ o, actions }: { o: Order; actions: OrderActions }) {
+  const method = paymentById(o.paymentId)
+  const step = STEP_OF[o.status]
+  const caption =
+    o.status === 'cooking'
+      ? o.kitchens > 1
+        ? ORDER.caption.cookingMany(o.kitchens)
+        : ORDER.caption.cooking(o.restaurant.name)
+      : o.status === 'picked'
+        ? ORDER.caption.picked(o.rider)
+        : o.status === 'near'
+          ? ORDER.caption.near(o.rider)
+          : ''
+
+  if (o.status === 'cancelled') {
+    return (
+      <div className="flex items-start gap-3 rounded-[16px] bg-graphite-50 p-3.5">
+        <XCircleIcon size={20} className="mt-0.5 shrink-0 text-graphite-500" />
+        <p className="text-label font-normal text-graphite-700">{ORDER.cancelled(o.amount, `${method.label.replace(/^UPI · /, '')} ${method.detail}`, !!method.cash)}</p>
+      </div>
+    )
+  }
+
   return (
     <div className="grid gap-3.5">
       <div className="flex items-center gap-3.5">
-        <Photo slug={t.dish.id} alt="" px={64} className="size-14 shrink-0 rounded-[14px]" />
+        <Photo slug={o.dish.id} alt="" px={64} className="size-14 shrink-0 rounded-[14px]" />
         <div className="grid min-w-0 flex-1">
-          <span className="text-caption font-normal text-graphite-500">Arriving in</span>
-          <span className="text-[26px] font-semibold leading-8 tracking-[-0.02em] tabular-nums">{t.etaMin} min</span>
+          {o.status === 'delivered' ? (
+            <>
+              <span className="text-caption font-normal text-graphite-500">{o.restaurant.name}</span>
+              <span className="text-[22px] font-semibold leading-8 tracking-[-0.02em]">{ORDER.caption.delivered(o.deliveredAt ?? '')}</span>
+            </>
+          ) : (
+            <>
+              <span className="text-caption font-normal text-graphite-500">{o.status === 'near' ? 'Arriving' : 'Arriving in'}</span>
+              <span className="text-[26px] font-semibold leading-8 tracking-[-0.02em] tabular-nums">{o.status === 'near' ? 'now' : `${o.etaLeft} min`}</span>
+            </>
+          )}
         </div>
       </div>
       <div className="grid grid-cols-4 gap-1" role="img" aria-label={`Step ${step + 1} of 4: ${STEPS[step]}`}>
         {STEPS.map((_, i) => (
-          <span key={i} className={cn('h-1 rounded-full', i <= step ? 'bg-indigo-500' : 'bg-graphite-100')} />
+          <span key={i} className={cn('h-1 rounded-full transition-colors duration-500', i <= step ? 'bg-indigo-500' : 'bg-graphite-100')} />
         ))}
       </div>
-      <span className="text-label font-normal text-graphite-700">{caption}</span>
+
+      {caption && (
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-label font-normal text-graphite-700">{caption}</span>
+          {o.status === 'cooking' && !o.confirmingCancel && (
+            <Button size="sm" variant="text" onClick={() => actions.onAskCancel(o.id, true)}>
+              Cancel order
+            </Button>
+          )}
+        </div>
+      )}
+
+      {o.status === 'cooking' && o.confirmingCancel && (
+        <div className="grid gap-3 rounded-[16px] bg-graphite-50 p-3.5">
+          <p className="text-label font-normal text-graphite-800">{ORDER.cancelAsk(o.amount, !!method.cash)}</p>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={() => actions.onCancel(o.id)}>
+              Cancel order
+            </Button>
+            <Button size="sm" variant="text" onClick={() => actions.onAskCancel(o.id, false)}>
+              Keep it
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {o.status === 'delivered' &&
+        (o.rating ? (
+          <p className="text-label font-normal text-graphite-700">{ORDER.rated[o.rating]}</p>
+        ) : (
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-label font-normal text-graphite-700">{ORDER.rateAsk}</span>
+            <div className="flex gap-2">
+              <Button size="sm" variant="secondary" icon={<ThumbsUpIcon size={16} />} onClick={() => actions.onRate(o.id, 'up')}>
+                Loved it
+              </Button>
+              <Button size="sm" variant="secondary" icon={<ThumbsDownIcon size={16} />} onClick={() => actions.onRate(o.id, 'down')}>
+                Not great
+              </Button>
+            </div>
+          </div>
+        ))}
     </div>
   )
 }
 
-export function TrackingCard({ text, t, step = 1 }: { text?: string; t: Tracking; step?: number }) {
+export function TrackingCard({ text, order, actions }: { text?: string; order: Order; actions: OrderActions }) {
   return (
     <HunchCard>
-      {text && <Say>{text}</Say>}
-      <TrackingBlock t={t} step={step} />
+      {text && order.status !== 'cancelled' && <Say>{text}</Say>}
+      <OrderBlock o={order} actions={actions} />
     </HunchCard>
   )
 }

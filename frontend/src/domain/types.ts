@@ -63,6 +63,10 @@ export interface Dish {
   options?: DishOption[]
   /** Flat rupees off today */
   offerOff?: number
+  /** What it is, for "the same thing elsewhere" (offers): "biryani", "paneer tikka"… */
+  kind: string
+  /** Out of stock today: shown, never orderable */
+  soldOut?: boolean
 }
 
 // ---------- the person ----------
@@ -108,7 +112,7 @@ export interface Usual {
 export interface NotForMe {
   dishId?: DishId
   restaurantId?: string
-  reason: 'too-spicy' | 'too-pricey' | 'not-this-place' | 'not-today'
+  reason: 'too-spicy' | 'too-pricey' | 'not-this-place' | 'not-today' | 'disliked'
 }
 
 export interface UserProfile {
@@ -203,6 +207,7 @@ export type IconKey =
   | 'sun' | 'moon' | 'rain' | 'hot' | 'cold' | 'clock' | 'pin'
   | 'leaf' | 'lotus' | 'target' | 'barbell' | 'fire' | 'bowl'
   | 'coffee' | 'egg' | 'cake' | 'cookie' | 'shuffle' | 'moped' | 'tag' | 'chat'
+  | 'home' | 'briefcase' | 'phone' | 'card' | 'cash'
 
 /** One piece of the Today card's context row, e.g. CloudRain "Light rain". */
 export interface ContextItem {

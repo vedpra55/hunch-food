@@ -1,7 +1,7 @@
 import { CodeIcon, PlayIcon, XIcon } from '@phosphor-icons/react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
-import type { ConversationApi } from '../chat/useConversation'
+import { FAST_MINUTE_MS, type ConversationApi } from '../chat/useConversation'
 import { SCENARIOS } from '../data/scenarios'
 import { money } from '../domain/copy'
 import { DAY_NAMES } from '../domain/time'
@@ -99,6 +99,105 @@ const FLOWS: Flow[] = [
       if (c) api.pay(c)
     },
   },
+  {
+    id: 'deal',
+    label: 'Better deal',
+    note: 'Hunch finds the same thing cheaper at checkout',
+    scenario: 'dinner-rain',
+    run: async api => {
+      await api.wait(1800)
+      const u = api.homeNow().usual
+      if (!u) return
+      api.orderAgain(u)
+      await api.wait(2600)
+      const c = lastCheckout(api)
+      if (!c) return
+      api.switchDeal(c)
+      await api.wait(2000)
+      api.pay(c)
+    },
+  },
+  {
+    id: 'edit',
+    label: 'Edit cart, change address',
+    note: 'One more, remove one, an address that is out of reach',
+    scenario: 'dinner-rain',
+    run: async api => {
+      await api.wait(1200)
+      api.send('Chicken biryani')
+      await api.wait(2400)
+      const a = firstItem(api)
+      if (!a) return
+      api.add(a, 1, [])
+      await api.wait(900)
+      api.send('And a masala chai')
+      await api.wait(2400)
+      const b = firstItem(api)
+      if (!b) return
+      api.add(b, 1, [])
+      await api.wait(900)
+      api.viewCart()
+      await api.wait(1600)
+      api.changeQty(a.dish.id, 1)
+      await api.wait(1200)
+      api.changeQty(b.dish.id, -1)
+      await api.wait(1400)
+      api.openPicker('address')
+      await api.wait(1600)
+      api.chooseAddress('parents')
+      await api.wait(2600)
+      api.openPicker('address')
+      await api.wait(1400)
+      api.chooseAddress('work')
+    },
+  },
+  {
+    id: 'fail',
+    label: 'Payment fails',
+    note: 'Declined, switch to PhonePe, try again',
+    scenario: 'dinner-rain',
+    run: async api => {
+      api.setDev({ failNextPayment: true })
+      await api.wait(1500)
+      const u = api.homeNow().usual
+      if (!u) return
+      api.orderAgain(u)
+      await api.wait(1500)
+      const c = lastCheckout(api)
+      if (!c) return
+      api.keepDeal(c)
+      await api.wait(800)
+      api.pay(c)
+      await api.wait(3200)
+      api.openPicker('payment')
+      await api.wait(1400)
+      api.choosePayment('phonepe')
+      await api.wait(1400)
+      api.pay(c)
+    },
+  },
+  {
+    id: 'cancel',
+    label: 'Cancel an order',
+    note: 'Pay, then cancel before pickup',
+    scenario: 'breakfast',
+    run: async api => {
+      await api.wait(1500)
+      const u = api.homeNow().usual
+      if (!u) return
+      api.orderAgain(u)
+      await api.wait(1500)
+      const c = lastCheckout(api)
+      if (!c) return
+      api.pay(c)
+      await api.wait(3200)
+      const o = Object.values(api.latest().orders).find(x => x.status === 'cooking')
+      if (!o) return
+      api.askCancel(o.id, true)
+      await api.wait(1800)
+      api.cancel(o.id)
+    },
+  },
 ]
 
 /** Dev only: switch Home scenarios and auto-play the main flows. Open with ?dev in production builds. */
@@ -189,9 +288,14 @@ export function DevPanel({ api }: { api: ConversationApi }) {
                 <Item k="Rules" v={home.rules.map(r => r.label).join(', ') || '—'} />
                 <Item k="Off today" v={ctx.offToday.join(', ') || '—'} />
                 <Item k="Cart" v={state.cart.length ? `${state.cart.reduce((n, l) => n + l.qty, 0)} items` : '—'} />
-                <Item k="Order" v={state.order ? `on the way · ${state.order.etaMin} min` : '—'} />
+                <Item k="Orders" v={Object.values(state.orders).map(o => `${o.status}${o.status === 'delivered' || o.status === 'cancelled' ? '' : ` · ${o.etaLeft} min`}`).join(', ') || '—'} />
                 <Item k="Usual" v={home.usual ? `${home.usual.dish.name} · ${money(home.usual.dish.price)}` : '—'} />
               </dl>
+            </Block>
+
+            <Block title="Simulate">
+              <Toggle label={`Fast clock · 1 min = ${FAST_MINUTE_MS / 1000} s`} on={state.fastClock} onChange={v => api.setDev({ fastClock: v })} />
+              <Toggle label="Next payment fails" on={state.failNextPayment} onChange={v => api.setDev({ failNextPayment: v })} />
             </Block>
 
             <button type="button" onClick={() => api.reset(state.scenarioId)} className="h-9 rounded-full bg-graphite-50 text-[13px] font-medium hover:bg-graphite-100">
@@ -210,6 +314,15 @@ function Block({ title, children }: { title: string; children: React.ReactNode }
       <h3 className="px-1 pb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-graphite-500">{title}</h3>
       {children}
     </section>
+  )
+}
+
+function Toggle({ label, on, onChange }: { label: string; on: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <label className="flex cursor-pointer items-center justify-between gap-3 rounded-[10px] px-2.5 py-1.5 text-[13px] hover:bg-graphite-50">
+      {label}
+      <input type="checkbox" checked={on} onChange={e => onChange(e.target.checked)} className="size-4 accent-graphite-900" />
+    </label>
   )
 }
 

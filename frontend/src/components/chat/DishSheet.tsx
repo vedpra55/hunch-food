@@ -1,7 +1,7 @@
 import { MinusIcon, PlusIcon, TagIcon } from '@phosphor-icons/react'
 import { AnimatePresence, motion, useDragControls, type DragControls } from 'motion/react'
 import { useEffect, useState } from 'react'
-import { money, reasonSentence } from '../../domain/copy'
+import { money, ORDER, reasonSentence } from '../../domain/copy'
 import { clockLabel } from '../../domain/time'
 import type { NotForMe, Suggestion } from '../../domain/types'
 import { spring } from '../../design/motion'
@@ -186,8 +186,10 @@ function SheetBody({ s, drag, showNutrition, onAdd, onNotForMe }: Omit<DishSheet
           </span>
           <IconButton aria-label="One more" size="sm" variant="ghost" onClick={() => setQty(q => q + 1)} icon={<PlusIcon size={16} />} />
         </div>
-        <Button size="lg" className="flex-1" disabled={!s.open} onClick={() => onAdd(s, qty, customisation)}>
-          {s.open ? (
+        <Button size="lg" className="flex-1" disabled={!s.open || !!dish.soldOut} onClick={() => onAdd(s, qty, customisation)}>
+          {dish.soldOut ? (
+            ORDER.soldOut
+          ) : s.open ? (
             <>
               Add · <span className="tabular-nums">{money(dish.price * qty)}</span>
             </>

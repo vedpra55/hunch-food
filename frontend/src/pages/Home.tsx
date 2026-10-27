@@ -4,10 +4,13 @@ import { useConversation, type Msg } from '../chat/useConversation'
 import { Emerge, HunchSays, Typing, UserSays } from '../components/chat/Bubbles'
 import { CartPill, CheckoutCard, PlanCard, ReplyCard, TodayCard, TrackingCard } from '../components/chat/Cards'
 import { DishSheet } from '../components/chat/DishSheet'
+import { OptionsSheet } from '../components/chat/BottomSheet'
 import { TodaySheet } from '../components/chat/TodaySheet'
 import { TopBar } from '../components/chat/TopBar'
 import { AppShell } from '../components/layout/AppShell'
 import { Composer } from '../components/ui/Composer'
+import { ADDRESSES, addressById, PAYMENTS, paymentById } from '../data/account'
+import { delivery } from '../domain/orders'
 import { activeGoal } from '../domain/rules'
 import { DevPanel } from '../dev/DevPanel'
 import { cn } from '../lib/cn'
@@ -24,6 +27,9 @@ export function Home() {
   const { state, home } = api
   const end = useRef<HTMLDivElement>(null)
   const talked = state.thread.some(m => m.type === 'user')
+  const address = addressById(state.addressId)
+  const payment = paymentById(state.paymentId)
+  const orderActions = { onAskCancel: api.askCancel, onCancel: api.cancel, onRate: api.rate }
 
   // Follow the conversation, but leave the opening card where it is.
   useEffect(() => {
@@ -37,6 +43,8 @@ export function Home() {
           <Emerge key={m.id}>
             <TodayCard
               home={home}
+              order={home.tracking ? state.orders.live : undefined}
+              orderActions={orderActions}
               onOpen={api.openSheet}
               onOrder={api.orderAgain}
               onPrompt={p => api.send(p.text)}
@@ -64,13 +72,28 @@ export function Home() {
       case 'checkout':
         return (
           <Emerge key={m.id}>
-            <CheckoutCard lines={m.lines} status={m.status} onPay={() => api.pay(m.id)} onNotNow={() => api.notNow(m.id)} />
+            <CheckoutCard
+              lines={m.lines}
+              status={m.status}
+              deal={m.deal}
+              saved={m.saved}
+              error={m.error}
+              address={address}
+              payment={payment}
+              onQty={api.changeQty}
+              onSwitch={() => api.switchDeal(m.id)}
+              onKeep={() => api.keepDeal(m.id)}
+              onAddress={() => api.openPicker('address')}
+              onPayment={() => api.openPicker('payment')}
+              onPay={() => api.pay(m.id)}
+              onNotNow={() => api.notNow(m.id)}
+            />
           </Emerge>
         )
       case 'tracking':
         return (
           <Emerge key={m.id}>
-            <TrackingCard text={m.text} t={m.tracking} step={m.step} />
+            <TrackingCard text={m.text} order={state.orders[m.orderId]} actions={orderActions} />
           </Emerge>
         )
     }
@@ -96,7 +119,26 @@ export function Home() {
       </AppShell>
 
       <DishSheet s={state.sheet} showNutrition={!!activeGoal(state.user, state.ctx)} onClose={api.closeSheet} onAdd={api.add} onNotForMe={api.notForMe} />
-      <TodaySheet open={state.today} rules={api.todayRules} onToggle={api.toggleRule} onClose={api.closeToday} />
+      <TodaySheet open={state.picker === 'today'} rules={api.todayRules} onToggle={api.toggleRule} onClose={api.closePicker} />
+      <OptionsSheet
+        open={state.picker === 'address'}
+        title="Deliver to"
+        selected={state.addressId}
+        options={ADDRESSES.map(a => {
+          const out = delivery(state.cart, a).unreachable[0]
+          return { id: a.id, icon: a.id === 'work' ? 'briefcase' : 'home', label: a.label, detail: a.line, warning: out ? `${out.name} doesn't deliver here` : undefined }
+        })}
+        onPick={api.chooseAddress}
+        onClose={api.closePicker}
+      />
+      <OptionsSheet
+        open={state.picker === 'payment'}
+        title="Pay with"
+        selected={state.paymentId}
+        options={PAYMENTS.map(p => ({ id: p.id, icon: p.icon, label: p.label, detail: p.detail }))}
+        onPick={api.choosePayment}
+        onClose={api.closePicker}
+      />
       {DEV && <DevPanel api={api} />}
     </>
   )
