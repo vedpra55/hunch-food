@@ -25,50 +25,50 @@ The no-brainer test: app open to order placed in **≤ 3 taps or 1 sentence**.
 
 ## 2. Colour
 
-**Two families. That's the whole palette.**
+**Two families. That's the whole palette.** Page background `#FAFAFA`, everything that sits on it is white.
 
-### Persimmon (brand)
-One warm hue in 10 tones. Most of the time you see the light end (50–200).
-
-| Step | Hex | Use |
-|------|-----|-----|
-| 50  | `#FFF7F2` | Washes, selected backgrounds |
-| 100 | `#FFEDE2` | Soft brand buttons, offer notes |
-| 200 | `#FFDCC8` | Hunch body, rings, focus halos |
-| 300 | `#FFC2A2` | Hunch body edge, blush |
-| 400 | `#FFA273` | Hunch rim, waveform |
-| 500 | `#F57F48` | The one accent: Hunch Pick label, active icon |
-| 600 | `#DC6431` | Brand text on white (large only) |
-| 700 | `#B54C22` | Brand text on 50/100 tints |
-| 800 | `#8A3A1B` | — |
-| 900 | `#5E2812` | — |
-
-### Stone (neutral)
-Very slightly warm, so it sits well next to food.
+### Indigo (brand)
+One blue-indigo hue in 10 tones. Most of the time you see the light end (50–200).
 
 | Step | Hex | Use |
 |------|-----|-----|
-| 0   | `#FFFFFF` | Surfaces |
-| 25  | `#FBFAF9` | App canvas |
-| 50  | `#F5F4F2` | Fills: chips, inputs, secondary buttons |
-| 100 | `#ECEAE7` | Pressed fills, dividers when unavoidable |
-| 200 | `#DEDBD6` | Disabled borders |
-| 300 | `#C5C1BB` | Placeholder icons |
-| 400 | `#A09B94` | Placeholder text, hints |
-| 500 | `#7A756E` | Secondary text (4.6:1 on white) |
-| 600 | `#5C5852` | Icons at rest |
-| 700 | `#45413C` | Body text on tints |
-| 800 | `#2B2825` | Hunch's eyes and mouth |
-| 900 | `#1A1816` | Primary text, primary button |
+| 50  | `#F2F5FF` | Washes, selected backgrounds |
+| 100 | `#E5EBFF` | Soft brand buttons, offer notes |
+| 200 | `#CCD7FF` | Hunch body, rings, focus halos |
+| 300 | `#A8BBFF` | Hunch body edge, cheek glow |
+| 400 | `#7F97FF` | Hunch rim, waveform |
+| 500 | `#5872F5` | The one accent: Hunch sparkle, active icon |
+| 600 | `#4357E0` | Brand text on white ("Hunch pick" label) |
+| 700 | `#3644BD` | Brand text on 50/100 tints |
+| 800 | `#2E3A96` | — |
+| 900 | `#262F70` | — |
+
+### Graphite (neutral)
+A clean, very slightly cool grey.
+
+| Step | Hex | Use |
+|------|-----|-----|
+| 0   | `#FFFFFF` | Surfaces: cards, sheets, Island |
+| 25  | `#FAFAFA` | App background |
+| 50  | `#F4F4F5` | Fills: chips, inputs, secondary buttons |
+| 100 | `#EBEBED` | Pressed fills, dividers when unavoidable |
+| 200 | `#DCDCE0` | Disabled borders |
+| 300 | `#C4C4CA` | Placeholder icons |
+| 400 | `#9E9EA6` | Placeholder text, hints |
+| 500 | `#76767F` | Secondary text (4.6:1 on white) |
+| 600 | `#58585F` | Icons at rest |
+| 700 | `#424248` | Body text on tints |
+| 800 | `#2A2A2F` | Hunch's eyes and mouth |
+| 900 | `#18181B` | Primary text, primary button |
 
 ### Rules
-- **Ratio:** ~90 % Stone, ~8 % Persimmon tints (50–300), ≤ 2 % Persimmon 500+.
-- **One colour at a time.** A screen never shows more than one brand moment at full strength (usually Hunch or the Pick label).
-- **The primary button is ink (Stone 900),** not orange. Orange buttons shout; ink feels confident.
+- **Ratio:** ~90 % Graphite, ~8 % Indigo tints (50–300), ≤ 2 % Indigo 500+.
+- **One colour at a time.** A screen never shows more than one brand moment at full strength.
+- **The primary button is ink (Graphite 900).** Coloured buttons shout; ink feels confident and lets the food photo be the colourful thing.
 - **Gradients are light and single-hue.** Only three exist:
-  - `wash` — Persimmon 50 → white, top of screen behind Hunch.
-  - `orb` — Persimmon 50 → 200 → 400, only on Hunch and the mic.
-  - `shimmer` — Stone 50 → Persimmon 50 → Stone 50, moving across "thinking" text.
+  - `wash` — Indigo 50 → white, top of screen behind Hunch.
+  - `orb` — Indigo 50 → 200 → 400, only on Hunch and the mic.
+  - `shimmer` — moves across text while Hunch is thinking.
 - **Functional colours are not palette colours.** The veg mark (`#1E8E4E`), non-veg mark (`#8B3A1C`) and error (`#C8372D`) appear only where they carry meaning, always small.
 - Text contrast meets WCAG AA (4.5:1) for body text.
 
@@ -76,7 +76,7 @@ Very slightly warm, so it sits well next to food.
 
 ## 3. Hunch, the character
 
-A **soft pearl of persimmon**, light and slightly translucent, like a gummy or a drop of mango lassi. Ink eyes, a small mouth, blush when happy. Abstract body, readable face.
+A **soft indigo pearl**, light and slightly translucent, like a glass bead or a gummy. Ink eyes, a small mouth, a glow on the cheeks when happy. Abstract body, readable face.
 
 ### Anatomy
 | Part | Detail | Carries |
@@ -85,8 +85,8 @@ A **soft pearl of persimmon**, light and slightly translucent, like a gummy or a
 | Eyes | Ink ovals with a white catchlight | Look direction, blink |
 | Lids | Upper lid cuts the eye at a height and an angle; lower lid pushes up for smiles | Most of the emotion |
 | Mouth | Smile, grin, "o", flat, soft | Tone |
-| Blush | Persimmon 300 ovals under the eyes | Warmth, delight |
-| Aura | Faint Persimmon 200 glow | Presence; rings when listening |
+| Cheeks | Indigo 300 glow under the eyes | Warmth, delight |
+| Aura | Faint Indigo 200 glow | Presence; rings when listening |
 
 The face slides across the body toward where Hunch is looking, so it feels 3D.
 
@@ -97,14 +97,14 @@ The face slides across the body toward where Hunch is looking, so it feels 3D.
 | **Idle** | Waiting | Relaxed | Small smile | Slow breath (4 s) |
 | **Listening** | Mic on | Wide open | "o" sized by voice | Rings pulse with voice |
 | **Thinking** | Agent working | Half, slightly narrowed, looking up-side | Flat, off-centre | Faster wobble, orbiting dots |
-| **Found it** | Pick ready | Happy arcs `^ ^` | Grin | Hop, sparkles, blush |
-| **Delighted** | Better deal found | Wide, double catchlight | Open grin | Hop, blush |
+| **Found it** | Pick ready | Happy arcs `^ ^` | Grin | Hop, sparkles, cheek glow |
+| **Delighted** | Better deal found | Wide, double catchlight | Open grin | Hop, cheek glow |
 | **Focused** | Checkout, payment | Level, slightly lowered | Neutral smile | Almost still |
 | **On the way** | Tracking | Open, looking ahead | Smile | Leans forward, speed lines |
 | **Care** | Support | Inner corners raised | Soft, small | Slower, looks down |
 | **Sleepy** | Late night | Heavy | Tiny "o" | Slow, floating "z" |
 
-Colour stays persimmon in every mood. Care and Sleepy are slightly desaturated toward Stone; nothing else changes hue. Emotion comes from the face and the body.
+Colour stays indigo in every mood. Care and Sleepy are slightly desaturated toward Graphite; nothing else changes hue. Emotion comes from the face and the body.
 
 ### Where it lives
 Hunch is docked at the top centre of every screen in a frosted pill (the **Island**). It expands to speak, drops large into onboarding and empty states, and leaves the island to ride the route during tracking. One Hunch on screen at a time.
@@ -141,16 +141,16 @@ Warm, quick, a little cheeky. Short sentences. Hinglish when you use Hinglish.
 - **Radius:** `xs 8 · sm 12 · md 16 · lg 24 · xl 32 · full`. Chips and buttons are full; cards lg; sheets xl; plates are circles.
 - **Elevation** (shadows only, never borders):
   - `e0` flat — content on canvas.
-  - `e1` rest — `0 1px 2px rgb(26 24 22 / 4%), 0 4px 12px rgb(26 24 22 / 4%)` — cards.
-  - `e2` raised — `0 12px 32px -12px rgb(26 24 22 / 14%)` — pressed-up cards, dish Pick.
-  - `e3` floating — `0 24px 48px -16px rgb(26 24 22 / 20%)` — Island, sheets, toasts.
+  - `e1` rest — `0 1px 2px rgb(24 24 27 / 4%), 0 4px 12px rgb(24 24 27 / 4%)` — cards.
+  - `e2` raised — `0 12px 32px -12px rgb(24 24 27 / 14%)` — pressed-up cards, dish Pick.
+  - `e3` floating — `0 24px 48px -16px rgb(24 24 27 / 20%)` — Island, sheets, toasts.
 - **Frost:** `rgb(255 255 255 / 72%)` + 20 px backdrop blur, for the Island and the composer over content.
 
 ---
 
 ## 6. Iconography
 
-Line icons on a 24 px grid, 1.5 px stroke, round caps and joins (Phosphor Regular in production). Stone 600 at rest, Stone 900 when active, Persimmon 500 only for the Hunch sparkle. No filled or duotone variants, no other families.
+Line icons on a 24 px grid, 1.5 px stroke, round caps and joins (Phosphor Regular in production). Graphite 600 at rest, Graphite 900 when active, Indigo 500 only for the Hunch sparkle. No filled or duotone variants, no other families.
 
 Core set: sparkle (Hunch), mic, send, bag, clock, pin, tag, shield, scooter, chat, star, flame, leaf, protein, check, close, chevron, undo.
 
@@ -160,16 +160,16 @@ Core set: sparkle (Hunch), mic, send, bag, clock, pin, tag, shield, scooter, cha
 
 | Component | Anatomy | Notes |
 |-----------|---------|-------|
-| **Button** | Primary (ink), Soft (Persimmon 100 / 700 text), Secondary (Stone 50), Text, Icon. Heights 52 / 44 / 36. | One primary per view. |
-| **Mic button** | 56 px circle, `orb` gradient, ink mic glyph. Listening adds Persimmon 200 rings. | The main input. |
-| **Composer** | Stone 50 pill, placeholder, mic. Listening: white, halo, live waveform, "Sun raha hoon…". | Voice first, typing second. |
+| **Button** | Primary (ink), Soft (Indigo 100 / 700 text), Secondary (Graphite 50), Text, Icon. Heights 52 / 44 / 36. | One primary per view. |
+| **Mic button** | 56 px circle, `orb` gradient, ink mic glyph. Listening adds Indigo 200 rings. | The main input. |
+| **Composer** | Graphite 50 pill, placeholder, mic. Listening: white, halo, live waveform, "Sun raha hoon…". | Voice first, typing second. |
 | **Island** | Frost pill with Hunch. Collapsed, Speaking, Thinking (shimmer text). | Always top centre. |
-| **Thought chip** | Stone 50, Persimmon sparkle, label text. | Max 3 per answer. |
-| **Context chip** | No fill, Stone 500 text, small icon. | Time · weather · area. |
-| **Filter chip** | Stone 50 → selected ink with white text. | |
+| **Thought chip** | Graphite 50, Indigo sparkle, label text. | Max 3 per answer. |
+| **Context chip** | No fill, Graphite 500 text, small icon. | Time · weather · area. |
+| **Filter chip** | Graphite 50 → selected ink with white text. | |
 | **Dish row** | Plate 72–88, name, restaurant, numeric meta, veg mark, add button. | |
-| **Hunch Pick** | Large plate, Persimmon "Hunch pick" label, title, numeric meta, chips, primary button. | The hero of every answer. |
-| **Offer note** | Persimmon 50 surface, tag icon, saving in numeric, Soft button. | No gold, no flashing. |
+| **Hunch Pick** | Large plate, Indigo "Hunch pick" label, title, numeric meta, chips, primary button. | The hero of every answer. |
+| **Offer note** | Indigo 50 surface, tag icon, saving in numeric, Soft button. | No gold, no flashing. |
 | **Undo toast** | Ink pill, white text, countdown ring. | Replaces confirm dialogs. |
 
 ---
