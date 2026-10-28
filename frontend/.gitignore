@@ -26,3 +26,4 @@ dist-ssr
 
 # Downloaded dish photos (npm run photos)
 public/food/
+.vercel

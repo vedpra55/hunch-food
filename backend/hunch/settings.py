@@ -42,15 +42,20 @@ ASGI_APPLICATION = 'hunch.asgi.application'
 def database_from_url(url: str) -> dict:
     u = urlparse(url)
     q = {k: v[0] for k, v in parse_qs(u.query).items()}
+    port = u.port or 5432
+    # If connecting to Supabase connection pooler, port 6543 is transaction mode
+    # (prevents EMAXCONNSESSION: max clients reached in session mode pool_size: 15)
+    if 'pooler.supabase.com' in (u.hostname or '') and port == 5432:
+        port = 6543
     return {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': u.path.lstrip('/') or 'postgres',
         'USER': u.username or '',
         'PASSWORD': u.password or '',
         'HOST': q.pop('host', u.hostname or ''),
-        'PORT': str(u.port or 5432),
+        'PORT': str(port),
         'OPTIONS': q,
-        'CONN_MAX_AGE': 60,
+        'CONN_MAX_AGE': 0 if port == 6543 else 60,
     }
 
 
@@ -87,6 +92,10 @@ DEV_AUTH = DEBUG and env('DEV_AUTH', '1') == '1'
 
 LOGGING = {
     'version': 1,
+    'disable_existing_loggers': False,
     'handlers': {'console': {'class': 'logging.StreamHandler'}},
-    'loggers': {'hunch': {'handlers': ['console'], 'level': 'INFO'}},
+    'loggers': {
+        'hunch': {'handlers': ['console'], 'level': 'INFO'},
+        'django.request': {'handlers': ['console'], 'level': 'ERROR', 'propagate': False},
+    },
 }
