@@ -1,16 +1,21 @@
 """
 One turn of Hunch, streamed. The shape the person feels:
 
-  ack     "Spicy, under ₹150, got it. Checking kitchens near Law Gate."   (text before tools)
+  ack     "Spicy, under ₹150, got it. Checking kitchens near Law Gate."   (plain text before tools)
   steps   ✓ Searching kitchens near Law Gate for spicy · Found 6, 2 with offers
-  voice   "Chilli Paneer from Momo Junction, ₹30 off and here in 18 min."
-  thing   [dish cards]
+  say     "Chilli Paneer from Momo Junction, ₹30 off and here in 18 min."  (the reply's words)
+  card    [dish cards]                                                     (the reply's card)
 
-Events (server-sent, one JSON per line): text, ack, step, component, cart, profile, done, error.
-The OpenAI transcript is kept server-side (store=True) and chained by response id; instructions are
-rebuilt every request so the context (cart, time, memories) is always current.
+Events (server-sent, one JSON each): ack, step, say, cart, profile, done, error.
+`done` carries the saved message: the client replaces its live copy with it, so what streamed and
+what a reload shows are the same thing.
+
+Each turn starts clean: instructions (fixed rules, then this moment's context) plus the recent thread
+from our database. Rounds within a turn are chained by response id; nothing carries across turns, so
+a failed or stopped turn can't break the next one.
 """
 
+import asyncio
 import json
 import logging
 import time
@@ -22,16 +27,16 @@ from django.utils import timezone
 from openai import AsyncOpenAI
 
 from accounts.models import Person
+from orders.payments import sync_all
 from orders.services import cart_view
-from . import memory
 from .models import AgentRun, Conversation, Message
 from .prompt import SYSTEM, context
-from .tools import DISPLAY, TOOLS, Toolbox, dumps
+from .thread import current_conversation, message_view, transcript
+from .tools import TOOLS, Toolbox, dumps
 
 log = logging.getLogger('hunch')
 MAX_ROUNDS = 5
-# After this many turns a thread starts a fresh model chain (cost stays flat); the person's thread is unchanged.
-CHAIN_TURNS = 14
+SORRY = "Something went wrong on my side. Try that again?"
 
 _client: AsyncOpenAI | None = None
 
@@ -39,49 +44,77 @@ _client: AsyncOpenAI | None = None
 def client() -> AsyncOpenAI:
     global _client
     if _client is None:
-        _client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+        _client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY, timeout=45, max_retries=1)
     return _client
 
 
-def current_conversation(p: Person) -> Conversation:
-    c = p.conversations.filter(ended_at__isnull=True).order_by('-started_at').first()
-    return c or Conversation.objects.create(person=p)
+class SayStream:
+    """Pulls the `say` string out of the reply's arguments while they stream, so the words appear as written."""
+
+    def __init__(self):
+        self.args = ''
+        self.sent = 0
+
+    def feed(self, delta: str) -> str:
+        self.args += delta
+        now = partial_string(self.args, 'say')
+        new = now[self.sent:]
+        self.sent = len(now)
+        return new
 
 
-async def run_turn(person_id, text: str, event: str | None = None) -> AsyncIterator[dict]:
+def partial_string(buf: str, key: str) -> str:
+    """The value of "key" in a JSON object that may still be arriving, as far as it has arrived."""
+    i = buf.find(f'"{key}"')
+    if i < 0:
+        return ''
+    colon = buf.find(':', i + len(key) + 2)
+    start = buf.find('"', colon + 1) if colon >= 0 else -1
+    if start < 0:
+        return ''
+    out, k = [], start + 1
+    while k < len(buf):
+        ch = buf[k]
+        if ch == '\\':
+            if k + 1 >= len(buf):
+                break
+            nx = buf[k + 1]
+            if nx == 'u':
+                if k + 6 > len(buf):
+                    break
+                out.append(chr(int(buf[k + 2:k + 6], 16)))
+                k += 6
+                continue
+            out.append({'n': '\n', 't': '\t', 'r': '', 'b': '', 'f': ''}.get(nx, nx))
+            k += 2
+            continue
+        if ch == '"':
+            break
+        out.append(ch)
+        k += 1
+    return ''.join(out)
+
+
+async def run_turn(person_id, text: str, turn_id: str = '') -> AsyncIterator[dict]:
     started = time.monotonic()
     p = await sync_to_async(Person.objects.get)(id=person_id)
     conv = await sync_to_async(current_conversation)(p)
     box = Toolbox(p)
 
     user_text = text.strip()[:1000]
-    if event == 'open':
-        model_input = [{'role': 'developer', 'content': 'The person just opened Hunch. Greet them and begin.'}]
-    else:
-        model_input = [{'role': 'user', 'content': user_text}]
-        await sync_to_async(Message.objects.create)(conversation=conv, role='user', text=user_text)
+    user_msg = await sync_to_async(Message.objects.create)(conversation=conv, role='user', text=user_text, turn_id=turn_id)
 
-    previous = conv.last_response_id or None
-    if previous and conv.turns >= CHAIN_TURNS:
-        previous = None
-    if previous and conv.pending:
-        # The last turn ended on a display tool; the model is owed those outputs first.
-        model_input = conv.pending + model_input
-    elif not previous:
-        model_input = (await sync_to_async(_recent_as_context)(conv)) + model_input
-    conv.pending = []
-
-    memories = await sync_to_async(memory.recall)(str(p.id), user_text or 'food preferences')
-    instructions = SYSTEM + '\n' + await sync_to_async(context)(p, memories)
+    # Payments first: the agent should never talk about an order whose payment we haven't checked.
+    await sync_to_async(sync_all)(p)
+    instructions = SYSTEM + '\n' + await sync_to_async(context)(p)
+    model_input = await sync_to_async(transcript)(conv)
 
     ack_parts: list[str] = []
     steps: list[dict] = []
-    components: list[dict] = []
-    final = ''
     used: list[str] = []
-    usage = {'in': 0, 'out': 0}
-    rounds = 0
-    error = ''
+    usage = {'in': 0, 'cached': 0, 'out': 0}
+    rounds, error, stopped = 0, '', False
+    previous = None
 
     try:
         for rounds in range(1, MAX_ROUNDS + 1):
@@ -91,17 +124,24 @@ async def run_turn(person_id, text: str, event: str | None = None) -> AsyncItera
                 input=model_input,
                 previous_response_id=previous,
                 tools=TOOLS,
+                tool_choice='required',
                 parallel_tool_calls=True,
                 reasoning={'effort': 'low'},
-                max_output_tokens=1200,
+                max_output_tokens=1500,
                 store=True,
                 stream=True,
             )
-            text_now, calls, response = '', [], None
+            ack_now, calls, response = '', [], None
+            replies: dict[int, SayStream] = {}
             async for e in stream:
                 if e.type == 'response.output_text.delta':
-                    text_now += e.delta
-                    yield {'type': 'text', 'delta': e.delta}
+                    ack_now += e.delta
+                    yield {'type': 'ack', 'delta': e.delta}
+                elif e.type == 'response.output_item.added' and e.item.type == 'function_call' and e.item.name == 'reply':
+                    replies[e.output_index] = SayStream()
+                elif e.type == 'response.function_call_arguments.delta' and e.output_index in replies:
+                    if new := replies[e.output_index].feed(e.delta):
+                        yield {'type': 'say', 'delta': new}
                 elif e.type == 'response.output_item.done' and e.item.type == 'function_call':
                     calls.append(e.item)
                 elif e.type == 'response.completed':
@@ -112,13 +152,14 @@ async def run_turn(person_id, text: str, event: str | None = None) -> AsyncItera
             if response.usage:
                 usage['in'] += response.usage.input_tokens
                 usage['out'] += response.usage.output_tokens
+                details = getattr(response.usage, 'input_tokens_details', None)
+                usage['cached'] += getattr(details, 'cached_tokens', 0) or 0
+            if ack_now.strip():
+                ack_parts.append(ack_now.strip())
 
-            if not calls:
-                final = text_now
-                break
-
-            outputs, ended = [], False
-            for c in calls:
+            outputs = []
+            # Work first, the reply last, so the reply can show what the work found.
+            for c in sorted(calls, key=lambda c: c.name == 'reply'):
                 args = json.loads(c.arguments or '{}')
                 used.append(c.name)
                 label = await sync_to_async(box.label)(c.name, args)
@@ -131,88 +172,57 @@ async def run_turn(person_id, text: str, event: str | None = None) -> AsyncItera
                 if label:
                     steps.append({'id': sid, 'label': label, 'summary': res.summary})
                     yield {'type': 'step', 'id': sid, 'label': label, 'status': 'done', 'summary': res.summary}
-                if res.component:
-                    components.append(res.component)
-                    yield {'type': 'component', 'component': res.component}
                 outputs.append({'type': 'function_call_output', 'call_id': c.call_id, 'output': dumps(res.output)})
-                # A display tool that failed (closed kitchen, empty cart) hands back to the model to explain.
-                ended = ended or (c.name in DISPLAY and res.component is not None)
-
-            if ended:
-                # What it said alongside what it showed is the answer.
-                final = text_now
-                conv.pending = outputs
+            if box.final:
                 break
-            # Words before working tools were the acknowledgement.
-            if text_now.strip():
-                ack_parts.append(text_now.strip())
-                yield {'type': 'ack'}
+            if any(c.name == 'reply' for c in calls):
+                # The reply couldn't be shown (a bad id, an empty cart): its words are void; the model fixes it.
+                yield {'type': 'say_reset'}
             model_input = outputs
-        else:
-            final = final or "I couldn't finish that one. Try asking a little differently?"
+    except asyncio.CancelledError:
+        stopped = True
     except Exception as e:  # the person always gets an answer, never a stack trace
         log.exception('agent turn failed')
         error = str(e)[:500]
-        # A half-finished chain can't be continued; the next turn starts a fresh one.
-        previous = None
-        final = "Something went wrong on my side. Try that again?"
-        yield {'type': 'error', 'message': final}
 
-    if not error and not components and (box.cards or box.restaurants):
-        # It looked things up and answered but forgot to show them: show what it found, what it named first.
-        kind, found = ('dishes', box.cards) if box.cards else ('restaurants', box.restaurants)
-        named = [c for c in found.values() if c['name'].lower() in final.lower()]
-        auto = {'kind': kind, 'items': (named + [c for c in found.values() if c not in named])[:5 if kind == 'dishes' else 3]}
-        components.append(auto)
-        yield {'type': 'component', 'component': auto}
-    if not final.strip() and not error:
-        # Never leave the person with a card and no words.
-        final = _words_for(components[-1]) if components else ' '.join(ack_parts)
-        if final:
-            yield {'type': 'text', 'delta': final}
-    conv.last_response_id = previous or ''
-    conv.turns += 1
-    msg = await sync_to_async(_save)(conv, ' '.join(ack_parts), final.strip(), steps, components)
-    await sync_to_async(AgentRun.objects.create)(
-        conversation=conv, model=settings.OPENAI_MODEL, rounds=rounds, tools=used,
-        input_tokens=usage['in'], output_tokens=usage['out'], ms=int((time.monotonic() - started) * 1000), error=error,
+    final = box.final or _fallback(box, ack_parts, stopped)
+    if error and not box.final:
+        # A failed turn leaves the thread as it was: their message comes off, and they can send it again.
+        await sync_to_async(user_msg.delete)()
+        await sync_to_async(_log)(conv, rounds, used, usage, started, error)
+        yield {'type': 'error', 'message': SORRY, 'retry': user_text}
+        return
+
+    msg = await sync_to_async(Message.objects.create)(
+        conversation=conv, role='hunch', ack=' '.join(ack_parts), text=final['say'], steps=steps, components=final['components'],
     )
-    yield {'type': 'done', 'message_id': msg.id, 'cart': await sync_to_async(cart_view)(p), 'usage': usage}
-
-    if user_text and final and not error:
-        # After the person has their answer: let mem0 decide what's worth keeping.
-        await sync_to_async(memory.remember_turn)(str(p.id), user_text, final)
-
-
-def _words_for(c: dict) -> str:
-    if c['kind'] == 'collect':
-        need = {'name': 'your name', 'phone': 'a phone number for the rider', 'address': 'your block and room (or street)', 'sign_in': 'a quick email sign-in'}
-        items = [need[m] for m in c['missing'] if m in need]
-        return 'Before I place it, I need ' + (', '.join(items[:-1]) + ' and ' + items[-1] if len(items) > 1 else items[0]) + '.'
-    if c['kind'] == 'choices':
-        return c['question']
-    if c['kind'] == 'checkout':
-        o = c['order']
-        return f"₹{o['total']} from {o['restaurant']}, about {o['eta_min']} min. Tap Pay when you're ready."
-    return ''
+    await sync_to_async(_log)(conv, rounds, used, usage, started, 'stopped' if stopped else '')
+    if stopped:
+        return
+    view = await sync_to_async(message_view)(msg, p)
+    yield {'type': 'done', 'message': view, 'cart': await sync_to_async(cart_view)(p), 'usage': usage}
 
 
-def _save(conv: Conversation, ack: str, text: str, steps: list, components: list) -> Message:
-    conv.save(update_fields=['last_response_id', 'pending', 'turns'])
-    return Message.objects.create(conversation=conv, role='hunch', ack=ack, text=text, steps=steps, components=components)
+def _fallback(box: Toolbox, ack_parts: list[str], stopped: bool) -> dict:
+    """No valid reply (out of rounds, or stopped): show what the work found, in plain words."""
+    if stopped:
+        return {'say': 'Stopped.', 'components': []}
+    if box.cards:
+        return {'say': "Here's what I found.", 'components': [{'kind': 'dishes', 'items': list(box.cards.values())[:5]}]}
+    if box.restaurants:
+        return {'say': "Here's what I found.", 'components': [{'kind': 'restaurants', 'items': list(box.restaurants.values())[:3]}]}
+    return {'say': "I couldn't finish that one. Try asking a little differently?", 'components': []}
 
 
-def _recent_as_context(conv: Conversation) -> list[dict]:
-    """A new model chain on an old thread: hand over the last few lines as plain text."""
-    recent = list(conv.messages.order_by('-created_at')[:6])[::-1]
-    if not recent:
-        return []
-    lines = '\n'.join(f"{'Person' if m.role == 'user' else 'Hunch'}: {m.text}" for m in recent if m.text)
-    return [{'role': 'developer', 'content': f'Earlier in this conversation:\n{lines}'}]
+def _log(conv: Conversation, rounds: int, used: list, usage: dict, started: float, error: str) -> None:
+    AgentRun.objects.create(
+        conversation=conv, model=settings.OPENAI_MODEL, rounds=rounds, tools=used, input_tokens=usage['in'],
+        cached_tokens=usage['cached'], output_tokens=usage['out'], ms=int((time.monotonic() - started) * 1000), error=error,
+    )
 
 
 def reset(p: Person) -> Conversation:
-    """New conversation: the thread, the cart and today's switches clear; orders and memories stay."""
+    """New conversation: the thread, the cart and today's switches clear; orders and notes stay."""
     p.conversations.filter(ended_at__isnull=True).update(ended_at=timezone.now())
     p.cart.all().delete()
     p.today = {}

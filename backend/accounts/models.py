@@ -10,7 +10,7 @@ class Person(models.Model):
     """
     Everyone Hunch talks to. A guest (identified by a browser id) becomes a signed-in person
     when they verify their email; their conversation, cart and memories come with them.
-    Hard rules live here as columns so tools can enforce them; soft taste lives in mem0.
+    Hard rules live here as columns so tools can enforce them; soft taste lives in TasteNote.
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -60,3 +60,20 @@ class Address(models.Model):
 
     class Meta:
         ordering = ['-is_default', '-created_at']
+
+
+class TasteNote(models.Model):
+    """
+    A lasting taste or habit in the person's own words ("hates coriander", "orders after the 9 pm lab").
+    Written only when they say it (the agent's remember tool) or add it in Profile, never inferred from
+    a whole conversation. Rules (diet, allergies, place) are Person columns, not notes; favourites come
+    from orders.
+    """
+
+    person = models.ForeignKey(Person, on_delete=models.CASCADE, related_name='notes')
+    text = models.CharField(max_length=160)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at']

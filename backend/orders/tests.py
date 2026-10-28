@@ -90,9 +90,22 @@ class CartTests(Base):
 class CheckoutTests(Base):
     def test_gate_names_what_is_missing(self):
         S.add(self.p, 'momo-junction-veg-steamed-momos')
-        self.assertEqual(S.missing_for_checkout(self.p), ['phone', 'address', 'sign_in'])
+        self.assertEqual(S.missing_for_checkout(self.p), ['phone', 'address'])
+        with override_settings(AUTH_REQUIRED=True):
+            self.assertEqual(S.missing_for_checkout(self.p), ['phone', 'address', 'sign_in'])
         with self.assertRaises(S.CartError):
             S.draft_order(self.p)
+
+    def test_same_cart_reuses_the_unpaid_order(self):
+        self.ready()
+        S.add(self.p, 'momo-junction-veg-steamed-momos', 2)
+        first = S.draft_order(self.p)
+        self.assertEqual(S.draft_order(self.p).id, first.id)
+        S.add(self.p, 'momo-junction-veg-steamed-momos', 1)
+        second = S.draft_order(self.p)
+        self.assertNotEqual(second.id, first.id)
+        first.refresh_from_db()
+        self.assertEqual(first.status, Order.FAILED)
 
     def test_draft_and_lifecycle(self):
         self.ready()
@@ -118,10 +131,81 @@ class CheckoutTests(Base):
         area = Area.objects.get(slug='law-gate')
         Address.objects.create(person=person, label='PG', line='Near Law Gate', area=area, lat=area.lat, lng=area.lng, is_default=True)
         self.client.post('/api/cart', json.dumps({'dish_id': 'law-gate-kulcha-house-amritsari-aloo-kulcha', 'add': 2}), content_type='application/json', **h)
-        order = self.client.post('/api/checkout', json.dumps({'method': 'cod'}), content_type='application/json', **h).json()['order']
+        msg = self.client.post('/api/checkout', json.dumps({'method': 'cod'}), content_type='application/json', **h).json()['message']
+        order = msg['components'][0]['order']
         placed = self.client.post(f"/api/orders/{order['id']}/pay", **h).json()['order']
         self.assertEqual(placed['status'], 'placed')
         self.assertEqual(placed['stage'], 'cooking')
+        # The thread, as a reload shows it: the checkout card is now the placed order, and the event says so.
+        thread = self.client.get('/api/home', **h).json()['messages']
+        cards = [c for m in thread for c in m['components'] if c['kind'] == 'checkout']
+        self.assertEqual(cards[0]['order']['status'], 'placed')
+        self.assertTrue(any(m['role'] == 'event' and m['kind'] == 'paid' for m in thread))
+
+
+class PaymentSyncTests(Base):
+    """No webhook: reading an unpaid order asks Dodo (mocked here) and applies the answer once."""
+
+    def awaiting(self):
+        self.ready()
+        S.add(self.p, 'momo-junction-veg-steamed-momos', 1)
+        o = S.draft_order(self.p)
+        o.status, o.payment_session_id, o.payment_url = Order.AWAITING, 'cks_1', 'https://pay.example/1'
+        o.save()
+        return o
+
+    def setUp(self):
+        super().setUp()
+        from django.core.cache import cache
+        cache.clear()
+
+    def test_paid_order_is_placed_on_read(self):
+        o = self.awaiting()
+        with mock.patch.object(payments, 'session_status', return_value=('succeeded', 'pay_1')):
+            payments.sync_all(self.p)
+        o.refresh_from_db()
+        self.assertEqual((o.status, o.payment_id), (Order.PLACED, 'pay_1'))
+        self.assertEqual(self.p.cart.count(), 0)
+        from agent.models import Message
+        self.assertEqual(Message.objects.filter(role='event', kind='paid').count(), 1)
+        # Applying the same answer again changes nothing and says nothing new.
+        payments.apply(o, 'succeeded', 'pay_1')
+        self.assertEqual(Message.objects.filter(role='event', kind='paid').count(), 1)
+
+    def test_pending_stays_pending_and_pay_reopens_the_same_page(self):
+        o = self.awaiting()
+        with mock.patch.object(payments, 'session_status', return_value=('', '')):
+            r = self.client.post(f'/api/orders/{o.id}/pay', HTTP_X_GUEST_ID='t1').json()
+        self.assertEqual(r['checkout_url'], 'https://pay.example/1')
+        o.refresh_from_db()
+        self.assertEqual(o.status, Order.AWAITING)
+
+    def test_a_new_checkout_never_loses_a_paid_order(self):
+        o = self.awaiting()
+        with mock.patch.object(payments, 'session_status', return_value=('succeeded', 'pay_2')):
+            # They paid, came back, and tapped Checkout again before anything synced.
+            r = self.client.post('/api/checkout', '{}', content_type='application/json', HTTP_X_GUEST_ID='t1')
+        o.refresh_from_db()
+        self.assertEqual(o.status, Order.PLACED)
+        self.assertEqual(r.status_code, 409)  # the cart emptied when it was placed
+
+    def test_superseded_order_paid_late_still_places(self):
+        o = self.awaiting()
+        o.status = Order.FAILED
+        o.save()
+        with mock.patch.object(payments, 'session_status', return_value=('succeeded', 'pay_3')):
+            payments.sync_all(self.p)
+        o.refresh_from_db()
+        self.assertEqual(o.status, Order.PLACED)
+
+    def test_failed_payment_says_so_once(self):
+        o = self.awaiting()
+        with mock.patch.object(payments, 'session_status', return_value=('failed', 'pay_4')):
+            payments.sync_all(self.p)
+        o.refresh_from_db()
+        self.assertEqual(o.status, Order.FAILED)
+        from agent.models import Message
+        self.assertEqual(Message.objects.filter(kind='payment_failed').count(), 1)
 
 
 class WebhookTests(TestCase):
@@ -136,18 +220,40 @@ class WebhookTests(TestCase):
 class ToolTests(Base):
     """The agent's tools, run directly: what the model can and cannot do."""
 
-    def test_search_then_show_then_cart_then_checkout_gate(self):
+    def reply(self, box, say, kind='none', ids=(), choices=None):
+        return box.run('reply', {'say': say, 'show': {'kind': kind, 'ids': list(ids), 'pay': 'online'}, 'choices': choices})
+
+    def test_search_then_reply_then_cart_then_checkout_gate(self):
         box = Toolbox(self.p)
         res = box.run('search_food', {'query': 'kulcha', 'max_price': None, 'veg_only': None, 'with_offer': None, 'restaurant_id': None, 'min_protein': None})
         ids = [d['id'] for d in res.output['dishes']]
         self.assertTrue(ids)
-        shown = box.run('show_dishes', {'dish_ids': ids[:3]})
-        self.assertEqual(shown.component['kind'], 'dishes')
+        self.reply(box, 'Kulcha time.', 'dishes', ids[:3])
+        self.assertEqual(box.final['components'][0]['kind'], 'dishes')
         cart = box.run('update_cart', {'changes': [{'dish_id': ids[0], 'qty': 1, 'note': None}], 'clear_first': None})
         self.assertEqual(cart.events[0]['cart']['count'], 1)
-        gate = box.run('checkout', {'method': 'online'})
-        self.assertEqual(gate.component['kind'], 'collect')
-        self.assertIn('phone', gate.component['missing'])
+        box = Toolbox(self.p)
+        self.reply(box, 'Ready to pay!', 'checkout')
+        card = box.final['components'][0]
+        self.assertEqual(card['kind'], 'collect')
+        self.assertIn('phone', card['missing'])
+        self.assertIn('phone number', box.final['say'])  # the form's words, not the model's guess
+
+    def test_reply_with_made_up_ids_goes_back_to_the_model(self):
+        box = Toolbox(self.p)
+        res = self.reply(box, 'Try these.', 'dishes', ['no-such-dish'])
+        self.assertIn('error', res.output)
+        self.assertIsNone(box.final)
+
+    def test_checkout_on_empty_cart_goes_back_to_the_model(self):
+        box = Toolbox(self.p)
+        res = self.reply(box, 'Pay now.', 'checkout')
+        self.assertIn('empty', res.output['error'])
+
+    def test_choices_ride_with_the_words(self):
+        box = Toolbox(self.p)
+        self.reply(box, 'Veg or non-veg?', choices={'options': ['Veg', 'Non-veg'], 'multi': False})
+        self.assertEqual(box.final['components'], [{'kind': 'choices', 'options': ['Veg', 'Non-veg'], 'multi': False}])
 
     def test_profile_rules_are_enforced_after_saving(self):
         box = Toolbox(self.p)

@@ -6,10 +6,12 @@ Cart → checkout → order. Money is computed here and only here. Status moves 
 from dataclasses import dataclass
 from datetime import timedelta
 
+from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
-from accounts.models import Address, Person
+from accounts.models import Person
+from accounts.services import default_address, has_detail
 from catalog.models import Dish, Offer
 from catalog.search import best_offer, where
 from catalog.services import MAX_KM, allowed, eta_min, is_open, km, opens_label, why_not
@@ -100,23 +102,20 @@ def cart_view(p: Person) -> dict:
 
 
 def missing_for_checkout(p: Person) -> list[str]:
-    """What must be true before money can move. The agent asks for these, one at a time."""
+    """What must be true before money can move. Each is asked for once, in one form."""
     missing = []
     if not p.name:
         missing.append('name')
     if not p.phone:
         missing.append('phone')
-    a = default_address(p)
-    # An area alone isn't enough for a rider: they need the block and room, or the street.
-    if not a or a.line.strip() == a.area.name:
+    if not has_detail(default_address(p)):
         missing.append('address')
-    if not p.signed_in:
+    if settings.AUTH_REQUIRED and not p.signed_in:
         missing.append('sign_in')
     return missing
 
 
-def default_address(p: Person) -> Address | None:
-    return p.addresses.filter(is_default=True).first() or p.addresses.first()
+REUSE_FOR = timedelta(hours=2)
 
 
 @transaction.atomic
@@ -139,9 +138,16 @@ def draft_order(p: Person, method: str = 'online') -> Order:
     if dist > MAX_KM:
         raise CartError(f"{r.name} doesn't deliver to {a.label} ({dist} km away).")
 
-    # A fresh draft replaces any older unpaid one.
-    p.orders.filter(status__in=[Order.DRAFT, Order.AWAITING]).update(status=Order.FAILED)
     t = totals(lines)
+    # The same cart, still unpaid and recent: keep that order (and its payment page) instead of making another.
+    same = sorted((l.dish_id, l.qty) for l in lines)
+    recent = timezone.now() - REUSE_FOR
+    for o in p.orders.filter(status__in=[Order.DRAFT, Order.AWAITING], created_at__gte=recent).prefetch_related('items'):
+        if (sorted((i.dish_id, i.qty) for i in o.items.all()) == same and o.total == t.total and o.method == method
+                and o.address_line == a.line and o.phone == p.phone):
+            return o
+    # Anything else unpaid is superseded. It keeps its payment session, so a late payment still places it.
+    p.orders.filter(status__in=[Order.DRAFT, Order.AWAITING]).update(status=Order.FAILED)
     o = Order.objects.create(
         person=p, restaurant=r, method=method, address_label=a.label, address_line=a.line, handoff=a.handoff,
         distance_km=dist, phone=p.phone, name=p.name, item_total=t.item_total, delivery_fee=t.delivery_fee,

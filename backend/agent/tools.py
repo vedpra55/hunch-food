@@ -1,7 +1,7 @@
 """
 The agent's hands. Each tool: a strict JSON schema the model fills, a plain-language step label the
 person sees while it runs, and an executor that enforces the rules in code (never in the prompt).
-Display tools end the turn: what the model said plus what it shows is the answer.
+`reply` is the answer: words plus at most one card, checked here before the person sees it.
 """
 
 import json
@@ -9,12 +9,14 @@ from dataclasses import dataclass, field
 from typing import Any, Callable
 
 from accounts.models import Person
+from accounts.services import has_detail, note, set_location
 from catalog.models import Restaurant
 from catalog.search import Hit, restaurant_menu, search_dishes, search_restaurants, where
 from catalog.services import is_open, opens_label
 from orders import services as orders
 from orders.models import Order
-from . import memory
+from orders.payments import sync_all
+from .thread import checkout_card, profile_view
 
 
 def _s(desc: str, nullable: bool = False) -> dict:
@@ -82,33 +84,33 @@ TOOLS = [
                     'description': 'lpu-bh boys hostels, lpu-gh girls hostels, lpu-unimall Uni Mall / Block 34, law-gate, chaheru, maheru, phg-* Phagwara, jal-* Jalandhar.'},
         'detail': _s('Block, room, building or street if they said it, e.g. "BH-4, Room 212".', nullable=True),
     }),
-    fn('remember', 'Note a lasting taste, habit or preference in their words (not rules like diet; use save_profile for those).', {
+    fn('remember', 'Note a lasting taste or habit they told you, in their words (not rules like diet: use save_profile). Never note recommendations, carts, payments or times.', {
         'fact': _s('Short, third person: "Hates coriander", "Orders after the 9 pm lab".'),
     }),
-    fn('show_dishes', 'Show dishes as cards under your message. The pick first. Ends your turn.', {
-        'dish_ids': _arr({'type': 'string'}, '2–6 dish ids from search results, best first.'),
+    fn('order_status', 'Their live or latest order: stage, minutes left, payment state. Checks the payment with the bank first.', {}),
+    fn('reply', 'Your answer to the person. Every turn ends with exactly one reply, after any tools you needed.', {
+        'say': _s('One or two short sentences. Lead with the pick and one reason. Name the restaurant.'),
+        'show': {
+            'type': 'object',
+            'description': 'The card under your words. dishes/restaurants: ids from tool results this turn or shown earlier, best first. menu: one kitchen id. checkout: prepares the order from the cart (or the details form if something is missing). order: their live order card. none: words only.',
+            'properties': {
+                'kind': {'type': 'string', 'enum': ['none', 'dishes', 'restaurants', 'menu', 'checkout', 'order']},
+                'ids': _arr({'type': 'string'}, 'Dish ids (2–6), kitchen ids (1–4), or one kitchen id for a menu. Empty otherwise.'),
+                'pay': {'type': 'string', 'enum': ['online', 'cod'], 'description': 'For checkout: online (UPI/card) unless they asked for cash on delivery.'},
+            },
+            'required': ['kind', 'ids', 'pay'],
+            'additionalProperties': False,
+        },
+        'choices': {
+            'anyOf': [
+                {'type': 'object', 'properties': {'options': _arr({'type': 'string'}, '2–6 short tappable answers.'), 'multi': {'type': 'boolean', 'description': 'Let them pick several.'}},
+                 'required': ['options', 'multi'], 'additionalProperties': False},
+                {'type': 'null'},
+            ],
+            'description': 'Tappable answers when your words end in a question. null otherwise.',
+        },
     }),
-    fn('show_restaurants', 'Show kitchens as cards under your message. Ends your turn.', {
-        'restaurant_ids': _arr({'type': 'string'}, '1–4 kitchen ids.'),
-    }),
-    fn('show_menu', "Show one kitchen's menu so they can browse. Ends your turn.", {
-        'restaurant_id': _s("The kitchen's id."),
-    }),
-    fn('checkout', 'Prepare the order from the cart. If name, phone, address or sign-in is missing, shows a form for it instead. Never takes money. Ends your turn.', {
-        'method': {'type': 'string', 'enum': ['online', 'cod'], 'description': 'online (UPI/card) unless they asked for cash on delivery.'},
-    }),
-    fn('ask_choice', 'Ask one question with tappable options. Ends your turn.', {
-        'question': _s('The question, short.'),
-        'options': _arr({'type': 'string'}, '2–6 short options.'),
-        'multi': _b('Let them pick several.'),
-    }),
-    fn('order_status', 'Show their live or latest order with tracking (cancel lives on that card), then tell them the stage and time.', {}),
 ]
-
-# These end the turn: their words + the card are the answer. order_status shows a card but the model
-# still speaks after it, with the actual stage and time.
-DISPLAY = {'show_dishes', 'show_restaurants', 'show_menu', 'checkout', 'ask_choice'}
-
 
 @dataclass
 class Result:
@@ -119,12 +121,15 @@ class Result:
 
 
 class Toolbox:
-    """Runs tools for one person during one turn, remembering what it found so display tools can show it."""
+    """Runs tools for one person during one turn, remembering what it found so the reply can show it."""
 
     def __init__(self, person: Person):
         self.p = person
         self.cards: dict[str, dict] = {}
         self.restaurants: dict[str, dict] = {}
+        self.order_id: str | None = None
+        # Set by a valid reply: {"say": str, "components": [...]}.
+        self.final: dict | None = None
 
     # ---------- labels ----------
 
@@ -154,11 +159,9 @@ class Toolbox:
             return 'Noting that'
         if name == 'set_location':
             return 'Setting where you are'
-        if name == 'checkout':
-            return 'Checking name, phone and address'
         if name == 'order_status':
-            return 'Checking your order'
-        return None  # display tools run silently
+            return 'Checking your order and payment'
+        return None  # the reply runs silently
 
     # ---------- run ----------
 
@@ -262,83 +265,81 @@ class Toolbox:
         return Result({'saved': saved}, summary='Saved ' + ', '.join(saved) if saved else 'Saved', events=[{'type': 'profile', 'profile': profile_view(p)}])
 
     def t_set_location(self, a: dict) -> Result:
-        from accounts.models import Address
-        from catalog.models import Area
-
-        area = Area.objects.filter(slug=a.get('area_id')).first()
-        if not area:
+        addr = set_location(self.p, a.get('area_id') or '', a.get('detail') or '')
+        if not addr:
             return Result({'error': 'Unknown area'}, summary='Unknown area')
-        detail = (a.get('detail') or '').strip()
-        self.p.addresses.update(is_default=False)
-        addr = self.p.addresses.filter(area=area).first() or Address(person=self.p, area=area, lat=area.lat, lng=area.lng)
-        addr.label = 'Hostel' if area.campus else area.name.split(',')[0]
-        addr.line = detail or addr.line or area.name
-        addr.handoff = 'Gate 1' if area.campus else ''
-        addr.is_default = True
-        addr.save()
-        return Result({'delivering_to': area.name, 'has_detail': bool(detail or addr.line != area.name)}, summary=f'Delivering to {area.name}',
+        return Result({'delivering_to': addr.area.name, 'has_detail': has_detail(addr)}, summary=f'Delivering to {addr.area.name}',
                       events=[{'type': 'profile', 'profile': profile_view(self.p)}])
 
     def t_remember(self, a: dict) -> Result:
-        memory.note(str(self.p.id), a['fact'])
-        return Result({'ok': True}, summary='Noted')
-
-    # ---------- display (end the turn) ----------
-
-    def t_show_dishes(self, a: dict) -> Result:
-        ids = [i for i in a.get('dish_ids') or [] if i]
-        missing = [i for i in ids if i not in self.cards]
-        if missing:
-            # Shown without searching this turn (e.g. from the menu): rank them for this person.
-            for h in search_dishes(self.p, '', limit=60):
-                if h.dish.slug in missing:
-                    self.cards[h.dish.slug] = h.card()
-        items = [self.cards[i] for i in ids if i in self.cards]
-        return Result({'shown': len(items)}, component={'kind': 'dishes', 'items': items} if items else None)
-
-    def t_show_restaurants(self, a: dict) -> Result:
-        ids = a.get('restaurant_ids') or []
-        if any(i not in self.restaurants for i in ids):
-            for r in search_restaurants(self.p, '', limit=40):
-                self.restaurants.setdefault(r['id'], r)
-        items = [self.restaurants[i] for i in ids if i in self.restaurants]
-        return Result({'shown': len(items)}, component={'kind': 'restaurants', 'items': items} if items else None)
-
-    def t_show_menu(self, a: dict) -> Result:
-        m = restaurant_menu(self.p, a.get('restaurant_id') or '')
-        return Result({'shown': bool(m)}, component={'kind': 'menu', 'restaurant': m} if m else None)
-
-    def t_checkout(self, a: dict) -> Result:
-        missing = orders.missing_for_checkout(self.p)
-        cart = orders.cart_view(self.p)
-        if not cart['count']:
-            return Result({'error': 'The cart is empty.'}, summary='Cart is empty')
-        if missing:
-            return Result({'needs': missing}, component={'kind': 'collect', 'missing': missing, 'name': self.p.name, 'phone': self.p.phone},
-                          summary='Need ' + ', '.join(m.replace('_', ' ') for m in missing))
-        o = orders.draft_order(self.p, a.get('method') or 'online')
-        view = orders.order_view(o)
-        return Result({'order_id': view['id'], 'total': view['total'], 'eta_min': view['eta_min'], 'address': view['address']},
-                      component={'kind': 'checkout', 'order': view}, summary=f"Ready · ₹{view['total']}")
-
-    def t_ask_choice(self, a: dict) -> Result:
-        return Result({'asked': True}, component={'kind': 'choices', 'question': a['question'], 'options': (a.get('options') or [])[:6], 'multi': bool(a.get('multi'))})
+        n = note(self.p, a.get('fact') or '')
+        return Result({'ok': bool(n)}, summary='Noted' if n else 'Nothing to note')
 
     def t_order_status(self, a: dict) -> Result:
-        o = self.p.orders.filter(status__in=[Order.PLACED, Order.CANCELLED]).order_by('-created_at').first()
+        sync_all(self.p)
+        o = self.p.orders.exclude(status=Order.DRAFT).select_related('restaurant').order_by('-created_at').first()
         if not o:
             return Result({'error': 'No orders yet.'}, summary='No orders yet')
-        view = orders.order_view(o)
-        return Result({'stage': view['stage'], 'eta_left': view['eta_left'], 'arrives_at': view.get('arrives_at'), 'restaurant': view['restaurant'], 'refund_id': view['refund_id']},
-                      component={'kind': 'order', 'order': view}, summary=view['stage'].replace('_', ' '))
+        self.order_id = str(o.id)
+        v = orders.order_view(o)
+        paid = {'placed': 'paid' if o.method == 'online' else 'cash on delivery', 'awaiting_payment': 'waiting for payment',
+                'failed': 'not paid', 'cancelled': 'cancelled'}.get(o.status, o.status)
+        return Result({'restaurant': v['restaurant'], 'stage': v['stage'], 'payment': paid, 'eta_left_min': v['eta_left'],
+                       'arrives_at': v.get('arrives_at'), 'total': v['total'], 'refund_id': v['refund_id'] or None},
+                      summary=f"{v['stage'].replace('_', ' ')} · {paid}")
 
+    # ---------- the answer ----------
 
-def profile_view(p: Person) -> dict:
-    return {
-        'id': str(p.id), 'name': p.name, 'email': p.email, 'phone': p.phone, 'signed_in': p.signed_in, 'diet': p.diet,
-        'allergies': p.allergies, 'spice': p.spice, 'budget': p.budget, 'veg_days': p.veg_days, 'goal': p.goal,
-        'onboarded': p.onboarded, 'use_weather': p.use_weather, 'nudge_on': p.nudge_on, 'nudge_at': str(p.nudge_at)[:5],
-    }
+    def t_reply(self, a: dict) -> Result:
+        """Turn the model's answer into words and a card. A card that can't be made goes back to the model."""
+        say = (a.get('say') or '').strip()
+        show = a.get('show') or {}
+        kind, ids = show.get('kind') or 'none', [i for i in show.get('ids') or [] if i]
+        components: list[dict] = []
+        if kind == 'dishes':
+            missing = [i for i in ids if i not in self.cards]
+            if missing:
+                # Shown without searching this turn (from the menu or an earlier turn): rank them for this person.
+                for h in search_dishes(self.p, '', limit=80):
+                    if h.dish.slug in missing:
+                        self.cards[h.dish.slug] = h.card()
+            items = [self.cards[i] for i in ids if i in self.cards][:6]
+            if not items:
+                return Result({'error': 'None of those dish ids exist. Use ids from search_food results.'})
+            components.append({'kind': 'dishes', 'items': items})
+        elif kind == 'restaurants':
+            if any(i not in self.restaurants for i in ids):
+                for r in search_restaurants(self.p, '', limit=40):
+                    self.restaurants.setdefault(r['id'], r)
+            items = [self.restaurants[i] for i in ids if i in self.restaurants][:4]
+            if not items:
+                return Result({'error': 'None of those kitchen ids exist. Use ids from find_restaurants.'})
+            components.append({'kind': 'restaurants', 'items': items})
+        elif kind == 'menu':
+            m = restaurant_menu(self.p, ids[0] if ids else '')
+            if not m:
+                return Result({'error': 'No kitchen with that id.'})
+            components.append({'kind': 'menu', 'restaurant': m})
+        elif kind == 'checkout':
+            try:
+                words, card = checkout_card(self.p, show.get('pay') or 'online')
+            except orders.CartError as e:
+                return Result({'error': f'Could not prepare checkout: {e}'}, summary=str(e))
+            components.append(card)
+            # The form's words are exact about what's missing; the model may not know.
+            if card['kind'] == 'collect' or not say:
+                say = words
+        elif kind == 'order':
+            o = self.p.orders.exclude(status=Order.DRAFT).order_by('-created_at').first()
+            if o:
+                components.append({'kind': 'order', 'order_id': str(o.id)})
+        choices = a.get('choices')
+        if choices and choices.get('options'):
+            components.append({'kind': 'choices', 'options': choices['options'][:6], 'multi': bool(choices.get('multi'))})
+        if not say and not components:
+            return Result({'error': 'Say something.'})
+        self.final = {'say': say, 'components': components}
+        return Result({'shown': kind, 'ok': True})
 
 
 def dumps(x: Any) -> str:

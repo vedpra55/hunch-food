@@ -51,6 +51,8 @@ class Order(models.Model):
     rating = models.CharField(max_length=4, blank=True)
 
     payment_session_id = models.CharField(max_length=60, blank=True)
+    # The hosted payment page for this order; tapping Pay again reopens the same one.
+    payment_url = models.URLField(max_length=400, blank=True)
     payment_id = models.CharField(max_length=60, blank=True)
     payment_status = models.CharField(max_length=30, blank=True)
     refund_id = models.CharField(max_length=60, blank=True)

@@ -62,7 +62,7 @@ TIME_ZONE = 'Asia/Kolkata'
 USE_TZ = True
 
 CORS_ALLOWED_ORIGINS = [o for o in env('CORS_ORIGINS', env('FRONTEND_URL', 'http://localhost:5173')).split(',') if o]
-CORS_ALLOW_HEADERS = ['authorization', 'content-type', 'x-guest-id', 'x-dev-email']
+CORS_ALLOW_HEADERS = ['authorization', 'content-type', 'x-guest-id', 'x-dev-email', 'x-turn-id']
 
 # --- Hunch ---
 OPENAI_API_KEY = env('OPENAI_API_KEY') or env('OPENAI_KEY')
@@ -80,7 +80,8 @@ DODO_PRODUCT_ID = env('DODO_PRODUCT_ID')
 DODO_WEBHOOK_SECRET = env('DODO_WEBHOOK_SECRET')
 FRONTEND_URL = env('FRONTEND_URL', 'http://localhost:5173')
 
-MEMORY_ENABLED = env('MEMORY_ENABLED', '1') == '1'
+# Email sign-in before paying. Off while testing: a guest (browser id) with a name, phone and address can order.
+AUTH_REQUIRED = env('AUTH_REQUIRED', '0') == '1'
 # Dev only: `X-Dev-Email` signs a test user in without an OTP. Never on in production.
 DEV_AUTH = DEBUG and env('DEV_AUTH', '1') == '1'
 
