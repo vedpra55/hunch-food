@@ -13,6 +13,8 @@ export interface ComposerProps {
   placeholder?: string
   /** Shown while listening */
   listeningLabel?: string
+  /** Live spoken transcript */
+  transcript?: string
   /** Live mic level 0…1. Omit to simulate. */
   voiceLevel?: number
   disabled?: boolean
@@ -29,6 +31,7 @@ export function Composer({
   onSubmit,
   placeholder = 'Ask Hunch for anything…',
   listeningLabel = 'Sun raha hoon…',
+  transcript,
   voiceLevel,
   disabled,
   working,
@@ -58,9 +61,9 @@ export function Composer({
     >
       {listening ? (
         <>
-          <Waveform level={voiceLevel} className="min-w-0 flex-1" />
-          <span lang="hi" className="whitespace-nowrap text-[13px] text-graphite-500">
-            {listeningLabel}
+          <Waveform level={voiceLevel} className="w-16 shrink-0" />
+          <span className="min-w-0 flex-1 truncate text-[15px] font-medium text-graphite-800">
+            {transcript || listeningLabel}
           </span>
           <IconButton aria-label="Stop listening" variant="primary" onClick={onMicToggle} icon={<span className="size-3 rounded-[3px] bg-white" />} />
         </>

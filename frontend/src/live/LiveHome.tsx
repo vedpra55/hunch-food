@@ -19,7 +19,7 @@ import { api, signOut, transcribeVoice, type DishCard, type Home, type OrderView
 import { Onboarding } from './Onboarding'
 import { Ack, ComponentView, DishDetail, OrderCard, Pic, Steps, type Handlers } from './parts'
 import { useHunch, type HunchApi, type Turn } from './useHunch'
-import { useAudioRecorder } from '../lib/useAudioRecorder'
+import { useVoiceInput } from '../lib/useVoiceInput'
 
 const inr = (n: number) => `₹${n.toLocaleString('en-IN')}`
 
@@ -54,14 +54,14 @@ function Main({ h }: { h: HunchApi }) {
   const online = useOnline()
   const end = useRef<HTMLDivElement>(null)
 
-  const recorder = useAudioRecorder({
-    onTranscribe: async blob => {
-      return await transcribeVoice(blob)
-    },
-    onResult: text => {
+  const voice = useVoiceInput({
+    onAutoSend: text => {
       if (text.trim()) {
         void h.say(text.trim())
       }
+    },
+    onTranscribeFallback: async blob => {
+      return await transcribeVoice(blob)
     },
     onError: err => {
       setToast({ id: Date.now(), text: err })
@@ -168,13 +168,14 @@ function Main({ h }: { h: HunchApi }) {
               )}
             </AnimatePresence>
             <Composer
-              listening={recorder.isRecording || recorder.isTranscribing}
-              listeningLabel={recorder.isTranscribing ? 'Transcribing…' : 'Listening…'}
-              voiceLevel={recorder.level}
-              onMicToggle={recorder.toggle}
+              listening={voice.isListening || voice.isProcessing}
+              listeningLabel={voice.isProcessing ? 'Transcribing…' : 'Listening…'}
+              transcript={voice.transcript}
+              voiceLevel={voice.level}
+              onMicToggle={voice.toggle}
               onSubmit={t => void h.say(t)}
               working={h.working}
-              onStop={h.stop}
+              onStop={voice.stop}
             />
           </div>
         }
