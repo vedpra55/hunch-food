@@ -8,11 +8,13 @@ import { IconContext } from '@phosphor-icons/react'
 import { MotionConfig } from 'motion/react'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { LIVE } from './live/api'
+import { LiveHome } from './live/LiveHome'
 import { Home } from './pages/Home'
 import { Playground } from './pages/Playground'
 
-// Two pages for now; a router comes with the real screens.
-const Page = location.pathname.startsWith('/playground') ? Playground : Home
+// Live (real agent, VITE_API_URL set) or the offline demo (?demo, or no API configured).
+const Page = location.pathname.startsWith('/playground') ? Playground : LIVE ? LiveHome : Home
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

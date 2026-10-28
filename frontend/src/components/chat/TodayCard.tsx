@@ -111,7 +111,7 @@ export function TodayCard({ home, sky, skyMode, order, orderActions, onOpen, onO
 }
 
 /** Time and weather as quiet text; today's rules as stamps you can tap to switch off. */
-function ContextRow({ items, dark, onClick }: { items: ContextItem[]; dark: boolean; onClick?: () => void }) {
+export function ContextRow({ items, dark, onClick }: { items: ContextItem[]; dark: boolean; onClick?: () => void }) {
   const body = items.map(c =>
     c.rule ? (
       <span
@@ -184,7 +184,7 @@ const STARS = [
 ]
 
 /** Weather moving in the sky. Decorative only; reduced motion freezes it. */
-function Weather({ sky }: { sky: Sky }) {
+export function Weather({ sky }: { sky: Sky }) {
   const streak = sky.dark ? 'to-white/60' : 'to-indigo-800/35'
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0">
