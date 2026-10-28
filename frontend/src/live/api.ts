@@ -54,6 +54,23 @@ export async function api<T>(path: string, init?: { method?: string; body?: unkn
   return body as T
 }
 
+/** Transcribe spoken audio using Gemini 2.0 Flash backend. */
+export async function transcribeVoice(audioBlob: Blob): Promise<string> {
+  const formData = new FormData()
+  formData.append('audio', audioBlob, 'voice.webm')
+  const h: Record<string, string> = { 'X-Guest-Id': guestId() }
+  if (session?.access_token) h.Authorization = `Bearer ${session.access_token}`
+
+  const res = await fetch(`${API}/voice/transcribe`, {
+    method: 'POST',
+    headers: h,
+    body: formData,
+  })
+  const body = await res.json().catch(() => ({}))
+  if (!res.ok) throw new ApiError(body.error ?? `Voice transcription failed (${res.status})`, res.status, body)
+  return (body.text as string) || ''
+}
+
 /** One agent turn, as a stream of events (ack, step, say, cart, profile, done, error). Retried sends with the
  * same turn id are answered from the server's copy, never run twice. */
 export async function chat(body: { text: string; turn_id: string }, onEvent: (e: AgentEvent) => void, signal?: AbortSignal) {

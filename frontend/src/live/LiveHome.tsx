@@ -15,10 +15,11 @@ import { spring } from '../design/motion'
 import { skyFill, skyFor } from '../design/sky'
 import type { IconKey } from '../domain/types'
 import { cn } from '../lib/cn'
-import { api, signOut, type DishCard, type Home, type OrderView } from './api'
+import { api, signOut, transcribeVoice, type DishCard, type Home, type OrderView } from './api'
 import { Onboarding } from './Onboarding'
 import { Ack, ComponentView, DishDetail, OrderCard, Pic, Steps, type Handlers } from './parts'
 import { useHunch, type HunchApi, type Turn } from './useHunch'
+import { useAudioRecorder } from '../lib/useAudioRecorder'
 
 const inr = (n: number) => `₹${n.toLocaleString('en-IN')}`
 
@@ -52,6 +53,20 @@ function Main({ h }: { h: HunchApi }) {
   const [toast, setToast] = useState<Toast>()
   const online = useOnline()
   const end = useRef<HTMLDivElement>(null)
+
+  const recorder = useAudioRecorder({
+    onTranscribe: async blob => {
+      return await transcribeVoice(blob)
+    },
+    onResult: text => {
+      if (text.trim()) {
+        void h.say(text.trim())
+      }
+    },
+    onError: err => {
+      setToast({ id: Date.now(), text: err })
+    },
+  })
 
   useEffect(() => {
     if (h.turns.length) end.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
@@ -152,7 +167,15 @@ function Main({ h }: { h: HunchApi }) {
                 </motion.button>
               )}
             </AnimatePresence>
-            <Composer listening={false} listeningLabel="Listening…" onMicToggle={() => {}} onSubmit={t => void h.say(t)} working={h.working} onStop={h.stop} />
+            <Composer
+              listening={recorder.isRecording || recorder.isTranscribing}
+              listeningLabel={recorder.isTranscribing ? 'Transcribing…' : 'Listening…'}
+              voiceLevel={recorder.level}
+              onMicToggle={recorder.toggle}
+              onSubmit={t => void h.say(t)}
+              working={h.working}
+              onStop={h.stop}
+            />
           </div>
         }
       >

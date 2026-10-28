@@ -15,6 +15,7 @@ from .home import home
 from .loop import reset, run_turn
 from .models import Conversation, Message
 from .thread import current_conversation, message_view, messages_view, profile_view
+from .voice import transcribe_audio
 
 # A turn that dies without finishing frees the thread after this long.
 TURN_LOCK = timedelta(seconds=120)
@@ -130,3 +131,44 @@ def reset_view(request):
         return err
     reset(p)
     return JsonResponse({'ok': True, 'home': home(p)})
+
+
+@csrf_exempt
+@require_POST
+def voice_transcribe(request):
+    """Transcribe audio using Gemini 2.0 Flash."""
+    p, err = _person_or_401(request)
+    if err:
+        return err
+
+    audio_bytes = None
+    mime_type = 'audio/webm'
+
+    if 'audio' in request.FILES:
+        uploaded = request.FILES['audio']
+        audio_bytes = uploaded.read()
+        mime_type = uploaded.content_type or 'audio/webm'
+    elif request.content_type and any(request.content_type.startswith(m) for m in ('audio/', 'video/')):
+        audio_bytes = request.body
+        mime_type = request.content_type
+    else:
+        try:
+            body = json.loads(request.body or b'{}')
+            if 'audio' in body:
+                import base64
+                audio_bytes = base64.b64decode(body['audio'])
+                mime_type = body.get('mime_type', 'audio/webm')
+        except Exception:
+            pass
+
+    if not audio_bytes:
+        return JsonResponse({'error': 'No audio data received.'}, status=400)
+
+    try:
+        text = transcribe_audio(audio_bytes, mime_type)
+        return JsonResponse({'text': text})
+    except ValueError as e:
+        return JsonResponse({'error': str(e)}, status=503)
+    except Exception as e:
+        return JsonResponse({'error': f'Transcription failed: {e}'}, status=500)
+
