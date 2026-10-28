@@ -33,9 +33,11 @@ def client() -> DodoPayments:
 
 def start_checkout(o: Order, email: str) -> str:
     """Create a hosted checkout for this order and return its URL."""
+    # Guests (sign-in off) have no email yet: Dodo's page asks for it, and we fill in what we know.
+    customer = {'email': email, 'name': o.name, 'phone_number': f'+91{o.phone}' if len(o.phone) == 10 else o.phone} if email else None
     res = client().checkout_sessions.create(
+        **({'customer': customer} if customer else {}),
         product_cart=[{'product_id': settings.DODO_PRODUCT_ID, 'quantity': 1, 'amount': o.total * 100}],
-        customer={'email': email, 'name': o.name, 'phone_number': f'+91{o.phone}' if len(o.phone) == 10 else o.phone},
         billing_currency='INR',
         billing_address={'country': 'IN', 'city': 'Phagwara', 'state': 'Punjab', 'street': o.address_line[:100], 'zipcode': '144411'},
         minimal_address=True,

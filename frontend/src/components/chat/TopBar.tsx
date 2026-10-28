@@ -1,3 +1,4 @@
+import { UserIcon } from '@phosphor-icons/react'
 import { AnimatePresence, motion } from 'motion/react'
 import { dur } from '../../design/motion'
 import { cn } from '../../lib/cn'
@@ -10,7 +11,8 @@ export interface TopBarProps {
   status?: string
   /** Animate the status as "thinking" */
   working?: boolean
-  initial: string
+  /** The person's initial; a neutral icon until we know their name. */
+  initial?: string
   onProfile?: () => void
 }
 
@@ -24,7 +26,7 @@ export function TopBar({ mood, status, working, initial, onProfile }: TopBarProp
         aria-label="Profile and settings"
         className="mt-[14px] grid size-9 place-items-center rounded-full bg-white text-label font-semibold text-graphite-700 shadow-e1 transition-colors hover:bg-graphite-50"
       >
-        {initial}
+        {initial || <UserIcon size={17} />}
       </button>
       <div className="flex flex-col items-center">
         <Hunch mood={mood} size={64} look={[0, 0.45]} />

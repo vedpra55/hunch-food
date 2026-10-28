@@ -1,7 +1,7 @@
-import { ArrowLeftIcon, ShoppingBagIcon, XIcon } from '@phosphor-icons/react'
+import { ArrowClockwiseIcon, ArrowLeftIcon, CheckCircleIcon, ShoppingBagIcon, SparkleIcon, WarningCircleIcon, WifiSlashIcon, XCircleIcon, XIcon } from '@phosphor-icons/react'
 import { AnimatePresence, motion } from 'motion/react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { HunchVoice, Typing, UserSays } from '../components/chat/Bubbles'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { HunchMark, UserSays } from '../components/chat/Bubbles'
 import { BottomSheet } from '../components/chat/BottomSheet'
 import { StageIcon } from '../components/chat/StageIcon'
 import { TopBar } from '../components/chat/TopBar'
@@ -15,88 +15,121 @@ import { spring } from '../design/motion'
 import { skyFill, skyFor } from '../design/sky'
 import type { IconKey } from '../domain/types'
 import { cn } from '../lib/cn'
-import { api, signOut, type Component, type DishCard, type Home, type OrderView } from './api'
+import { api, signOut, type DishCard, type Home, type OrderView } from './api'
+import { Onboarding } from './Onboarding'
 import { Ack, ComponentView, DishDetail, OrderCard, Pic, Steps, type Handlers } from './parts'
-import { useHunch, type Turn } from './useHunch'
+import { useHunch, type HunchApi, type Turn } from './useHunch'
 
 const inr = (n: number) => `₹${n.toLocaleString('en-IN')}`
 
-/** Home, live: the Today card from the API, then the conversation with the real agent. */
+/** Live: loading, then first-run setup for someone new, then home with the real agent. */
 export function LiveHome() {
   const h = useHunch()
+  if (h.booting) return <Loading />
+  if (!h.profile) return <CantReach error={h.error} />
+  if (!h.profile.onboarded) {
+    return (
+      <Onboarding
+        onDone={p => {
+          h.setProfile(p)
+          void h.load()
+        }}
+      />
+    )
+  }
+  return <Main h={h} />
+}
+
+interface Toast {
+  id: number
+  text: string
+  undo?: () => void
+}
+
+function Main({ h }: { h: HunchApi }) {
   const [dish, setDish] = useState<DishCard>()
   const [profileOpen, setProfileOpen] = useState(false)
+  const [toast, setToast] = useState<Toast>()
+  const online = useOnline()
   const end = useRef<HTMLDivElement>(null)
-  const talked = h.turns.some(t => t.role === 'user')
 
   useEffect(() => {
     if (h.turns.length) end.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
   }, [h.turns])
 
-  /** A turn that needs no model: checkout forms, payment results. Free and instant. */
-  const local = useCallback((text: string, components: Component[]) => {
-    h.setTurns(ts => [...ts, { id: `l${Date.now()}`, role: 'hunch', text, ack: '', steps: [], components }])
-  }, [h])
+  useEffect(() => {
+    if (!toast) return
+    const t = setTimeout(() => setToast(undefined), 2800)
+    return () => clearTimeout(t)
+  }, [toast])
 
-  const checkout = useCallback(async (method: 'online' | 'cod' = 'online') => {
-    try {
-      const r = await api<{ order: OrderView }>('/checkout', { method: 'POST', body: { method } })
-      local(`${inr(r.order.total)} from ${r.order.restaurant}, about ${r.order.eta_min} min. Tap Pay when you're ready.`, [{ kind: 'checkout', order: r.order }])
-    } catch (e) {
-      const err = e as { body?: { missing?: string[] }; message: string }
-      if (err.body?.missing) local('Before I place it, I need a couple of details.', [{ kind: 'collect', missing: err.body.missing as never, name: h.profile?.name ?? '', phone: h.profile?.phone ?? '' }])
-      else local(err.message, [])
-    }
-  }, [h.profile, local])
-
-  const updateOrder = h.updateOrder
-  const handlers: Handlers = useMemo(() => ({
-    onDish: setDish,
-    onAdd: (id, add) => h.setQty(id, { add }),
-    onSay: text => h.say(text),
-    onCollected: () => checkout(),
-    onPay: async o => {
-      const r = await api<{ checkout_url?: string; order: OrderView }>(`/orders/${o.id}/pay`, { method: 'POST' })
-      if (r.checkout_url) location.href = r.checkout_url
-      else {
-        updateOrder(r.order)
-        local(`Placed. ${r.order.restaurant} is cooking.`, [{ kind: 'order', order: r.order }])
-        h.load()
-      }
-    },
-    onOrder: updateOrder,
-  }), [h, checkout, local, updateOrder])
-
-  // Back from the payment page: ask the server (which asks Dodo) how it went.
+  // Back from the payment page (?order=…): confirm with the bank before saying anything.
+  const { confirmPayment } = h
   useEffect(() => {
     const id = new URLSearchParams(location.search).get('order')
     if (!id) return
     history.replaceState(null, '', location.pathname)
-    let tries = 0
-    const poll = async () => {
-      const { order } = await api<{ order: OrderView }>(`/orders/${id}`)
-      if (order.status === 'placed') {
-        local(`Paid. ${order.restaurant} is cooking${order.arrives_at ? `, here around ${order.arrives_at}` : ''}.`, [{ kind: 'order', order }])
-        h.load()
-      } else if (order.status === 'failed') local("The payment didn't go through, and nothing was charged. Want to try again?", [])
-      else if (++tries < 8) setTimeout(poll, 2000)
-      else local('Still waiting to hear from the bank. I will update this as soon as it confirms.', [{ kind: 'order', order }])
-    }
-    poll().catch(() => {})
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    void confirmPayment(id)
+  }, [confirmPayment])
 
+  /** Add to the cart and say so: a toast with Undo, and the cart bar bumps. */
+  const add = useCallback(
+    async (d: { id: string; name: string }, n: number) => {
+      const err = await h.setQty(d.id, { add: n })
+      if (!err) setToast({ id: Date.now(), text: `Added ${n}× ${d.name}`, undo: () => void h.setQty(d.id, { add: -n }).then(() => setToast(undefined)) })
+      return err
+    },
+    [h],
+  )
+
+  const handlers: Omit<Handlers, 'latest'> = useMemo(
+    () => ({
+      onDish: setDish,
+      onAdd: add,
+      onSay: text => void h.say(text),
+      onCollected: () => void h.checkout(),
+      onPay: async o => {
+        const r = await api<{ checkout_url?: string; order: OrderView }>(`/orders/${o.id}/pay`, { method: 'POST' })
+        if (r.checkout_url) {
+          // Mark it waiting first: if they come back with Back, the restored page knows to check it.
+          h.updateOrder(r.order)
+          location.href = r.checkout_url
+        } else await h.load()
+      },
+      onOrder: h.updateOrder,
+      confirming: h.confirming,
+    }),
+    [h, add],
+  )
+
+  const last = h.turns[h.turns.length - 1]
   const lastHunch = [...h.turns].reverse().find(t => t.role === 'hunch')
-  const status = h.working ? (lastHunch?.steps.find(s => s.status === 'running')?.label ?? 'Thinking…') : undefined
+  const status = h.working ? (lastHunch?.steps.find(s => s.status === 'running')?.label ?? (lastHunch?.text ? 'Answering…' : 'Thinking…')) : undefined
 
   return (
     <>
       <AppShell
-        className={cn('gap-6', !talked && 'justify-center pb-16')}
-        top={<TopBar mood={h.working ? 'thinking' : 'idle'} status={status} working={h.working} initial={(h.profile?.name || 'H')[0]} onProfile={() => setProfileOpen(true)} />}
+        className="gap-6"
+        top={<TopBar mood={h.working ? 'thinking' : 'idle'} status={status} working={h.working} initial={h.profile?.name?.[0]} onProfile={() => setProfileOpen(true)} />}
         bottom={
           <div className="grid gap-2.5">
             <AnimatePresence>
+              {!online && (
+                <motion.p key="offline" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex items-center justify-center gap-2 rounded-full bg-graphite-900/90 px-4 py-2 text-[13px] text-white">
+                  <WifiSlashIcon size={15} /> You're offline. I'll be here when you're back.
+                </motion.p>
+              )}
+              {toast && (
+                <motion.div key={toast.id} initial={{ opacity: 0, y: 10, scale: 0.96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 6 }} transition={spring.snappy} role="status" className="flex items-center gap-2.5 rounded-full bg-white py-2 pl-4 pr-2 text-[14px] shadow-e3">
+                  <CheckCircleIcon size={18} weight="fill" className="shrink-0 text-indigo-500" />
+                  <span className="min-w-0 flex-1 truncate">{toast.text}</span>
+                  {toast.undo && (
+                    <Button size="sm" variant="text" onClick={toast.undo}>
+                      Undo
+                    </Button>
+                  )}
+                </motion.div>
+              )}
               {!!h.cart?.count && (
                 <motion.button
                   key="cart"
@@ -104,50 +137,181 @@ export function LiveHome() {
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 12 }}
-                  onClick={() => checkout()}
+                  onClick={() => void h.checkout()}
                   className="flex h-12 w-full items-center gap-2.5 rounded-full bg-graphite-900 px-5 text-label text-white shadow-e3"
                 >
-                  <ShoppingBagIcon size={18} />
+                  <motion.span key={h.cart.count} initial={{ scale: 1.5 }} animate={{ scale: 1 }} transition={spring.snappy} className="grid size-6 place-items-center rounded-full bg-white/15 text-[12px] tabular-nums">
+                    {h.cart.count}
+                  </motion.span>
                   <span className="flex-1 truncate text-left">
-                    {h.cart.count} from {h.cart.restaurant} · <span className="tabular-nums">{inr(h.cart.total)}</span>
+                    {h.cart.restaurant} · <span className="tabular-nums">{inr(h.cart.total)}</span>
                   </span>
-                  <span className="font-semibold">Checkout</span>
+                  <span className="inline-flex items-center gap-1.5 font-semibold">
+                    <ShoppingBagIcon size={16} /> Checkout
+                  </span>
                 </motion.button>
               )}
             </AnimatePresence>
-            <Composer listening={false} listeningLabel="Listening…" onMicToggle={() => {}} onSubmit={t => h.say(t)} disabled={h.working} />
+            <Composer listening={false} listeningLabel="Listening…" onMicToggle={() => {}} onSubmit={t => void h.say(t)} working={h.working} onStop={h.stop} />
           </div>
         }
       >
-        {h.home && <LiveToday home={h.home} onDish={setDish} onPrompt={p => h.say(p)} onOrder={updateOrder} />}
-        {h.turns.map(t => (t.role === 'user' ? <UserSays key={t.id}>{t.text}</UserSays> : <HunchTurn key={t.id} t={t} handlers={handlers} />))}
-        <AnimatePresence>{h.working && lastHunch && !lastHunch.text && !lastHunch.ack && !lastHunch.steps.length && <Typing key="typing" />}</AnimatePresence>
-        {h.error && !h.working && <p className="text-center text-[13px] text-graphite-500">{h.error.slice(0, 120)}</p>}
+        {h.home && <LiveToday home={h.home} onDish={setDish} onPrompt={p => void h.say(p)} onOrder={h.updateOrder} />}
+        {h.turns.map(t =>
+          t.role === 'user' ? (
+            <div key={t.id} className="grid justify-items-end gap-1.5">
+              <UserSays>{t.text}</UserSays>
+              {t.failed && !h.working && (
+                <button type="button" onClick={() => void h.say(t.failed!)} className="inline-flex items-center gap-1.5 text-[13px] font-medium text-indigo-600">
+                  <ArrowClockwiseIcon size={14} /> Didn't go through · Try again
+                </button>
+              )}
+            </div>
+          ) : t.role === 'event' ? (
+            t.kind === 'cart' ? null : <EventRow key={t.id} t={t} handlers={{ ...handlers, latest: false }} />
+          ) : (
+            <HunchTurn key={t.id} t={t} handlers={{ ...handlers, latest: t === last }} />
+          ),
+        )}
+        {h.error && !h.working && (
+          <p className="flex items-center justify-center gap-2 text-center text-[13px] text-graphite-500">
+            <WarningCircleIcon size={15} className="shrink-0" /> {h.error.slice(0, 140)}
+            <button type="button" aria-label="Dismiss" onClick={() => h.setError(undefined)} className="text-graphite-400 hover:text-graphite-700">
+              <XIcon size={13} />
+            </button>
+          </p>
+        )}
         <div ref={end} className="h-px scroll-mb-44" />
       </AppShell>
 
       <BottomSheet open={!!dish} title={dish?.name ?? ''} onClose={() => setDish(undefined)}>
-        {dish && <DishDetail d={dish} onAdd={qty => h.setQty(dish.id, { add: qty })} />}
+        {dish && <DishDetail key={dish.id} d={dish} onAdd={qty => add(dish, qty)} onClose={() => setDish(undefined)} />}
       </BottomSheet>
       <LiveProfile open={profileOpen} onClose={() => setProfileOpen(false)} onReset={async () => { await h.reset(); setProfileOpen(false) }} />
     </>
   )
 }
 
+/** One Hunch turn as one block: Hunch once, then what it understood, what it did, what it says, and what it hands over. */
 function HunchTurn({ t, handlers }: { t: Turn; handlers: Handlers }) {
-  const question = t.components.find(c => c.kind === 'choices')
-  const voice = t.text.trim() || (question && question.kind === 'choices' ? question.question : '')
+  const nothingYet = !t.ack.trim() && !t.text && !t.steps.length
   return (
     <div className="grid gap-3">
-      <Ack text={t.ack} />
-      <Steps steps={t.steps} />
-      {voice && <HunchVoice key={voice.length > 0 ? 'v' : 'e'} text={voice} mood={t.live ? 'thinking' : 'idle'} />}
+      <div className="flex gap-1.5 pr-4">
+        <HunchMark mood={t.live ? 'thinking' : 'idle'} />
+        <div className="grid min-w-0 flex-1 gap-2">
+          {t.live && nothingYet && <Dots />}
+          <Ack text={t.ack} />
+          <Steps steps={t.steps} />
+          {t.text && <Voice text={t.text} animate={!!t.streamed} />}
+        </div>
+      </div>
       {t.components.map((c, i) => (
-        <motion.div key={i} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={spring.gentle}>
+        <motion.div key={i} initial={t.streamed ? { opacity: 0, y: 10 } : false} animate={{ opacity: 1, y: 0 }} transition={spring.gentle}>
           <ComponentView c={c} h={handlers} />
         </motion.div>
       ))}
     </div>
+  )
+}
+
+/** Hunch's words. Words that arrive while you watch fade in as they come; old ones are just there. */
+function Voice({ text, animate }: { text: string; animate: boolean }) {
+  const words = text.split(' ')
+  return (
+    <p aria-label={text} className="text-[20px] font-medium leading-7 tracking-[-0.012em] text-pretty text-graphite-900">
+      {words.map((w, i) => (
+        <motion.span key={i} aria-hidden initial={animate ? { opacity: 0, filter: 'blur(4px)' } : false} animate={{ opacity: 1, filter: 'blur(0px)' }} transition={{ duration: 0.25 }} className="inline-block whitespace-pre">
+          {i < words.length - 1 ? `${w} ` : w}
+        </motion.span>
+      ))}
+    </p>
+  )
+}
+
+function Dots() {
+  return (
+    <span className="mt-[11px] flex h-4 gap-1" aria-label="Hunch is thinking">
+      {[0, 1, 2].map(i => (
+        <motion.i key={i} className="block size-1.5 rounded-full bg-graphite-400" animate={{ y: [0, -3, 0], opacity: [0.5, 1, 0.5] }} transition={{ duration: 0.9, repeat: Infinity, delay: i * 0.15 }} />
+      ))}
+    </span>
+  )
+}
+
+const EVENT_ICON: Record<string, ReactNode> = {
+  paid: <CheckCircleIcon size={16} weight="fill" className="text-indigo-500" />,
+  payment_failed: <WarningCircleIcon size={16} weight="fill" className="text-error" />,
+  cancelled: <XCircleIcon size={16} className="text-graphite-500" />,
+  setup: <SparkleIcon size={15} weight="fill" className="text-indigo-400" />,
+}
+
+/** Something that happened in the app (paid, cancelled, set up): a quiet line, and its card if it has one. */
+function EventRow({ t, handlers }: { t: Turn; handlers: Handlers }) {
+  return (
+    <motion.div initial={t.streamed ? { opacity: 0 } : false} animate={{ opacity: 1 }} className="grid gap-3">
+      <p className="flex items-center justify-center gap-1.5 text-center text-[13px] text-graphite-600">
+        {EVENT_ICON[t.kind]}
+        {t.text}
+      </p>
+      {t.components.map((c, i) => (
+        <ComponentView key={i} c={c} h={handlers} />
+      ))}
+    </motion.div>
+  )
+}
+
+function useOnline() {
+  const [online, setOnline] = useState(navigator.onLine)
+  useEffect(() => {
+    const on = () => setOnline(true)
+    const off = () => setOnline(false)
+    addEventListener('online', on)
+    addEventListener('offline', off)
+    return () => {
+      removeEventListener('online', on)
+      removeEventListener('offline', off)
+    }
+  }, [])
+  return online
+}
+
+/** First load: the shape of home, shimmering, so the screen is never blank. */
+function Loading() {
+  return (
+    <AppShell top={<TopBar mood="thinking" status="Waking up…" working />}>
+      <div aria-hidden className="grid gap-5 rounded-[28px] bg-indigo-50 p-5">
+        <div className="h-3 w-40 animate-pulse rounded-full bg-indigo-100" />
+        <div className="grid gap-2">
+          <div className="h-3 w-24 animate-pulse rounded-full bg-indigo-100" />
+          <div className="h-7 w-full animate-pulse rounded-[10px] bg-indigo-100" />
+          <div className="h-7 w-2/3 animate-pulse rounded-[10px] bg-indigo-100" />
+        </div>
+        <div className="h-[92px] animate-pulse rounded-[20px] bg-white/70" />
+        <div className="flex gap-2">
+          {[64, 96, 56].map(w => (
+            <div key={w} className="h-8 animate-pulse rounded-full bg-white/70" style={{ width: w }} />
+          ))}
+        </div>
+      </div>
+    </AppShell>
+  )
+}
+
+function CantReach({ error }: { error?: string }) {
+  return (
+    <AppShell top={<TopBar mood="sleepy" />}>
+      <div className="grid flex-1 place-items-center">
+        <div className="grid justify-items-center gap-3 text-center">
+          <WifiSlashIcon size={28} className="text-graphite-400" />
+          <p className="text-[17px] font-medium">I can't reach the kitchen network.</p>
+          <p className="max-w-[300px] text-[13px] text-graphite-500">{error ?? 'Check your connection.'}</p>
+          <Button onClick={() => location.reload()} icon={<ArrowClockwiseIcon size={16} />}>
+            Try again
+          </Button>
+        </div>
+      </div>
+    </AppShell>
   )
 }
 
@@ -210,10 +374,12 @@ interface Me {
   profile: { name: string; email: string; phone: string; diet: string; allergies: string[]; signed_in: boolean }
   addresses: { id: number; label: string; line: string; area: string; handoff: string }[]
   orders: OrderView[]
-  memories: { id: string; text: string }[]
+  notes: { id: number; text: string }[]
 }
 
-/** Profile, live: what Hunch knows (rules and memories), where it delivers, past orders, and the off switches. */
+const DIET_LABEL: Record<string, string> = { nonveg: 'Eats everything', eggetarian: 'Veg + eggs', veg: 'Vegetarian', jain: 'Jain', vegan: 'Vegan' }
+
+/** Profile, live: what Hunch knows (rules and tastes), where it delivers, past orders, and the off switches. */
 function LiveProfile({ open, onClose, onReset }: { open: boolean; onClose: () => void; onReset: () => void }) {
   const [me, setMe] = useState<Me>()
   useEffect(() => {
@@ -225,28 +391,34 @@ function LiveProfile({ open, onClose, onReset }: { open: boolean; onClose: () =>
         <motion.div initial={{ opacity: 0, x: -32 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -32 }} transition={spring.gentle} className="fixed inset-0 z-[35] overflow-y-auto bg-graphite-25" role="dialog" aria-label="Profile">
           <div className="mx-auto grid w-full max-w-[420px] gap-6 px-4 pb-16 pt-4">
             <IconButton aria-label="Back to Hunch" variant="ghost" size="sm" className="bg-white shadow-e1" icon={<ArrowLeftIcon size={18} />} onClick={onClose} />
-            {me && (
+            {!me ? (
+              <div className="grid gap-3" aria-hidden>
+                {[80, 140, 100].map(h => (
+                  <div key={h} className="animate-pulse rounded-[24px] bg-white" style={{ height: h }} />
+                ))}
+              </div>
+            ) : (
               <>
                 <div className="grid gap-0.5">
                   <h1 className="text-title">{me.profile.name || 'You'}</h1>
-                  <span className="text-label font-normal text-graphite-500">{me.profile.signed_in ? me.profile.email : 'Guest · signs in at your first order'}</span>
+                  <span className="text-label font-normal text-graphite-500">{me.profile.signed_in ? me.profile.email : 'On this device'}</span>
                 </div>
                 <Card title="Food rules">
                   <p className="text-label font-normal">
-                    {me.profile.diet} · {me.profile.allergies.length ? `no ${me.profile.allergies.join(', ')}` : 'no allergies'}
+                    {DIET_LABEL[me.profile.diet] ?? me.profile.diet} · {me.profile.allergies.length ? `no ${me.profile.allergies.join(', ')}` : 'no allergies'}
                   </p>
                   <p className="text-caption font-normal text-graphite-500">Tell Hunch to change these, e.g. "I'm vegetarian now".</p>
                 </Card>
-                <Card title="What Hunch remembers">
-                  {me.memories.length ? (
-                    me.memories.map(m => (
+                <Card title="Your tastes">
+                  {me.notes.length ? (
+                    me.notes.map(m => (
                       <div key={m.id} className="flex items-center gap-3">
                         <span className="flex-1 text-label font-normal">{m.text}</span>
-                        <IconButton aria-label="Forget this" variant="ghost" size="sm" icon={<XIcon size={14} />} onClick={async () => { await api(`/memories/${m.id}`, { method: 'DELETE' }); setMe({ ...me, memories: me.memories.filter(x => x.id !== m.id) }) }} />
+                        <IconButton aria-label="Forget this" variant="ghost" size="sm" icon={<XIcon size={14} />} onClick={async () => { await api(`/notes/${m.id}`, { method: 'DELETE' }); setMe({ ...me, notes: me.notes.filter(x => x.id !== m.id) }) }} />
                       </div>
                     ))
                   ) : (
-                    <p className="text-label font-normal text-graphite-500">Nothing yet. Order a few times.</p>
+                    <p className="text-label font-normal text-graphite-500">Nothing yet. Tell Hunch things like "I hate coriander".</p>
                   )}
                 </Card>
                 <Card title="Delivers to">
@@ -260,9 +432,11 @@ function LiveProfile({ open, onClose, onReset }: { open: boolean; onClose: () =>
                   <Button variant="secondary" block onClick={onReset}>
                     Reset conversation
                   </Button>
-                  <Button variant="text" onClick={async () => { await api('/memories/forget', { method: 'POST' }); setMe({ ...me, memories: [] }) }}>
-                    Forget what Hunch learned
-                  </Button>
+                  {me.notes.length > 0 && (
+                    <Button variant="text" onClick={async () => { await api('/notes/forget', { method: 'POST' }); setMe({ ...me, notes: [] }) }}>
+                      Forget my tastes
+                    </Button>
+                  )}
                   {me.profile.signed_in && (
                     <Button variant="text" onClick={async () => { await signOut(); location.reload() }}>
                       Sign out
@@ -278,7 +452,7 @@ function LiveProfile({ open, onClose, onReset }: { open: boolean; onClose: () =>
   )
 }
 
-const Card = ({ title, children }: { title: string; children: React.ReactNode }) => (
+const Card = ({ title, children }: { title: string; children: ReactNode }) => (
   <section className="grid gap-2 rounded-[24px] bg-white p-4 shadow-e1">
     <h2 className="text-[15px] font-semibold">{title}</h2>
     {children}

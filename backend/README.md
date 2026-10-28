@@ -1,8 +1,8 @@
 # Hunch backend
 
 Django (ASGI) for everything: catalogue, search, the agent, cart, orders, payments, identity.
-Supabase is the Postgres (pgvector + pg_trgm) and the email-OTP sign-in. No background jobs: order
-status moves with the clock, memory is written right after each reply.
+Supabase is the Postgres (pgvector + pg_trgm) and, when turned on, the email-OTP sign-in. No background
+jobs: order status moves with the clock, and payments are checked with Dodo whenever an unpaid order is read.
 
 ## Run locally
 
@@ -21,55 +21,68 @@ Frontend: `cd ../frontend && cp .env.example .env.local && npm run dev`. Without
 ## Test
 
 ```bash
-MEMORY_ENABLED=0 python manage.py test orders      # rules, cart, offers, checkout gate, lifecycle, webhook, tools (no model calls)
-python scripts/talk.py --dev you@test.in "spicy momos under 150"   # one live agent turn per argument (costs tokens)
+python manage.py test orders agent   # rules, cart, offers, payments sync, live cards, the turn loop with a scripted model (no tokens)
+python scripts/talk.py --guest g1 --setup "Ved,phg-gt-road" "spicy momos under 150"   # one live turn per argument (costs tokens)
 ```
 
-## How the agent works
+## How it's built: the app owns the state, the agent talks
 
-`agent/loop.py`, one turn, streamed as server-sent events:
+Everything that touches money or identity is plain code with no model: onboarding (`POST /api/onboarding`),
+the cart, checkout, payment and order status. The agent searches, recommends, answers and changes the cart
+when asked, and reads the current state on every turn.
 
-1. **Context** is rebuilt every turn (`agent/prompt.py`): time, where they are, rules (diet, allergies,
-   veg day), cart, live order, what's missing before checkout, and the top mem0 memories.
-2. **Acknowledge, then act.** The model first says what it understood and what it's doing ("Spicy, under
-   ₹150, got it. Checking kitchens near Law Gate."), then calls tools. Each tool call is shown as a step
-   with a plain label and a result ("Found 6 · 2 with offers").
-3. **Answer with a thing.** One or two sentences with the pick and one reason, plus a component:
-   dishes, kitchens, a menu, choices, the details form, checkout, or the order.
+**The thread** (`agent/thread.py`) is one timeline on the server: the person's words, Hunch's turns, and app
+events ("Added 1× Momos", "Paid ₹125", "Set up"). A reload shows exactly what streamed. Order and checkout
+cards are stored as references and drawn from the database each time, so a paid order never shows Pay again.
+
+## How a turn works (`agent/loop.py`)
+
+1. **Fresh input every turn:** the fixed rules (`agent/prompt.py`, cached by OpenAI), this moment's context
+   (time, place, rules, tastes, cart, orders, what's missing), and the last 14 entries of the thread, with
+   what each turn showed (dish ids included) and the app events. Nothing is chained across turns, so a failed
+   or stopped turn can't break the next one.
+2. **Acknowledge, then act.** Plain text before tools is the acknowledgement ("Spicy, under ₹150, got it.
+   Checking kitchens near Law Gate."); each tool call is a step with a label and a result ("Found 6 · 2 with offers").
+3. **One `reply`.** Every turn ends with exactly one `reply` call: words in `say` (streamed as they're
+   written) and one card in `show` (dishes, kitchens, menu, checkout, order, or none), plus tappable `choices`.
+   The server checks it first: unknown ids or an empty cart go back to the model to fix.
+4. **The protocol.** Each send carries a turn id: a retried send is answered from the saved copy, never run
+   twice. One turn at a time per thread. A heartbeat every 10 s. Stop cancels and saves what was there. On an
+   error, the person's message comes off the thread and they can send it again.
 
 Tools (`agent/tools.py`): `search_food`, `find_restaurants`, `get_menu`, `get_history`, `update_cart`,
-`save_profile`, `set_location`, `remember`, `show_dishes`, `show_restaurants`, `show_menu`, `checkout`,
-`ask_choice`, `order_status`.
+`save_profile`, `set_location`, `remember`, `order_status`, `reply`.
 
 Safety lives in code, not the prompt: diet, allergies and veg days are filtered inside search and the
 cart; one kitchen per order; totals are computed on the server; the agent can prepare a checkout but
 never pay, cancel or refund (those are the person's taps).
 
-Model: `gpt-6-luna` everywhere (conversation and mem0), `text-embedding-3-small` at 512 dimensions.
-The OpenAI transcript is kept server-side (`store=True`) and chained by response id; the person's
-thread is stored in `agent_message` and restored on reload. "Reset conversation" starts a new thread
-and clears the cart; orders and memories stay.
+Model: `gpt-6-luna`; embeddings `text-embedding-3-small` at 512 dimensions. `AgentRun` logs rounds, tools,
+tokens (and cached tokens) and time for every turn.
 
 ## Memory
 
-- Hard rules are columns on `accounts_person` (diet, allergies, veg days, spice, budget) and are enforced
-  by the tools.
-- Soft taste lives in mem0 (open source, in-process): OpenAI for extraction, pgvector in the same database
-  (`hunch_memories`). Visible and deletable in Profile.
+- Rules are columns on `accounts_person` (diet, allergies, veg days, spice, budget) and are enforced by the tools.
+- Tastes are `accounts_tastenote` rows, written only when the person states one ("I hate coriander") or adds
+  it in Profile. Near-repeats update the old note; at most 20. Never recommendations, carts, payments or times.
+- Favourites come from orders.
 
-## Payments (Dodo, test mode)
+## Payments (Dodo, test mode), no webhook needed
 
-One pay-what-you-want INR product (`DODO_PRODUCT_ID`) carries every order; the amount is the order
-total set on the server. Checkout opens Dodo's hosted page; on return the server asks Dodo for the
-session status and places the order. `POST /api/webhooks/dodo` verifies Standard Webhooks signatures
-(`DODO_WEBHOOK_SECRET`) and applies each event once. Cancel while cooking refunds in full.
+One pay-what-you-want INR product (`DODO_PRODUCT_ID`) carries every order; the amount is the order total set
+on the server. Every read of an unpaid order (the order card, home, the agent's context, its order tool) first
+asks Dodo about that order's checkout session (`orders/payments.py: sync`, at most every 3 s per order) and
+applies the result once. So the order is confirmed whether they come back through the return link, press Back,
+or just open the app later. The same cart reuses the unpaid order and its payment page; a newer checkout never
+fails a paid one. `POST /api/webhooks/dodo` (verified, applied once) is a second path once deployed.
 
 ## Identity
 
-`X-Guest-Id` (browser) → guest. `Authorization: Bearer <Supabase token>` → verified with Supabase
-`/auth/v1/user`; the guest's cart and conversation move into the account. Sign-in is asked for only at
-checkout (email + 6-digit code). Supabase dashboard: Auth → Email templates → Magic Link must include
-`{{ .Token }}` so the email carries the code.
+`X-Guest-Id` (browser) → a guest. `AUTH_REQUIRED=0` (default): a guest with a name, phone and address can
+order; Dodo's page asks for their email. `AUTH_REQUIRED=1` adds an email + 6-digit code sign-in before the
+first payment (`Authorization: Bearer <Supabase token>`, verified with `/auth/v1/user`; the guest's cart and
+thread move into the account). For that, Supabase → Auth → Email templates → Magic Link must include
+`{{ .Token }}` so the email carries a code instead of a link.
 
 ## Database (Supabase project `hunch`, ap-south-1)
 

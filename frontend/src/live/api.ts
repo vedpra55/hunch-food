@@ -54,10 +54,14 @@ export async function api<T>(path: string, init?: { method?: string; body?: unkn
   return body as T
 }
 
-/** One agent turn, as a stream of events (text, ack, step, component, cart, profile, done, error). */
-export async function chat(body: { text?: string; event?: 'open' }, onEvent: (e: AgentEvent) => void, signal?: AbortSignal) {
+/** One agent turn, as a stream of events (ack, step, say, cart, profile, done, error). Retried sends with the
+ * same turn id are answered from the server's copy, never run twice. */
+export async function chat(body: { text: string; turn_id: string }, onEvent: (e: AgentEvent) => void, signal?: AbortSignal) {
   const res = await fetch(`${API}/chat`, { method: 'POST', headers: headers(), body: JSON.stringify(body), signal })
-  if (!res.ok || !res.body) throw new ApiError('Hunch could not reply', res.status, {})
+  if (!res.ok || !res.body) {
+    const b = await res.json().catch(() => ({}))
+    throw new ApiError(b.error ?? 'Hunch could not reply', res.status, b)
+  }
   const reader = res.body.getReader()
   const decoder = new TextDecoder()
   let buf = ''
@@ -189,10 +193,11 @@ export type Component =
   | { kind: 'dishes'; items: DishCard[] }
   | { kind: 'restaurants'; items: RestaurantCard[] }
   | { kind: 'menu'; restaurant: Menu }
-  | { kind: 'choices'; question: string; options: string[]; multi: boolean }
+  | { kind: 'choices'; options: string[]; multi: boolean }
   | { kind: 'collect'; missing: ('name' | 'phone' | 'address' | 'sign_in')[]; name: string; phone: string }
-  | { kind: 'checkout'; order: OrderView }
-  | { kind: 'order'; order: OrderView }
+  // Live cards: drawn from the order as it is now, every time the thread is read.
+  | { kind: 'checkout'; order_id: string; order: OrderView }
+  | { kind: 'order'; order_id: string; order: OrderView }
 
 export interface Step {
   id: string
@@ -202,14 +207,21 @@ export interface Step {
 }
 
 export type AgentEvent =
-  | { type: 'text'; delta: string }
-  | { type: 'ack' }
+  | { type: 'ack'; delta: string }
   | ({ type: 'step' } & Step)
-  | { type: 'component'; component: Component }
+  | { type: 'say'; delta: string }
+  | { type: 'say_reset' }
   | { type: 'cart'; cart: Cart }
   | { type: 'profile'; profile: Profile }
-  | { type: 'done'; message_id: number; cart: Cart }
-  | { type: 'error'; message: string }
+  | { type: 'done'; message: StoredMessage; cart: Cart }
+  | { type: 'error'; message: string; retry?: string }
+
+export interface Area {
+  id: string
+  name: string
+  city: string
+  campus: boolean
+}
 
 export interface Profile {
   id: string
@@ -239,7 +251,9 @@ export interface Home {
 
 export interface StoredMessage {
   id: number
-  role: 'user' | 'hunch'
+  role: 'user' | 'hunch' | 'event'
+  /** For events: cart, paid, payment_failed, cancelled, setup */
+  kind: string
   text: string
   ack: string
   steps: Step[]

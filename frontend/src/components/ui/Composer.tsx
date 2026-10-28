@@ -16,6 +16,9 @@ export interface ComposerProps {
   /** Live mic level 0…1. Omit to simulate. */
   voiceLevel?: number
   disabled?: boolean
+  /** Hunch is answering: the button becomes Stop. Typing still works; sending waits. */
+  working?: boolean
+  onStop?: () => void
   className?: string
 }
 
@@ -28,13 +31,15 @@ export function Composer({
   listeningLabel = 'Sun raha hoon…',
   voiceLevel,
   disabled,
+  working,
+  onStop,
   className,
 }: ComposerProps) {
   const [text, setText] = useState('')
   const submit = (e: FormEvent) => {
     e.preventDefault()
     const t = text.trim()
-    if (!t || disabled) return
+    if (!t || disabled || working) return
     onSubmit?.(t)
     setText('')
   }
@@ -74,7 +79,11 @@ export function Composer({
             className="min-w-0 flex-1 bg-transparent text-[15px] text-graphite-900 outline-none placeholder:text-graphite-400"
           />
           <AnimatePresence mode="popLayout" initial={false}>
-            {text.trim() ? (
+            {working ? (
+              <motion.span key="stop" initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.6, opacity: 0 }} transition={spring.snappy}>
+                <IconButton aria-label="Stop" variant="primary" onClick={onStop} icon={<span className="size-3 rounded-[3px] bg-white" />} className="size-12" />
+              </motion.span>
+            ) : text.trim() ? (
               <motion.span key="send" initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.6, opacity: 0 }} transition={spring.snappy}>
                 <IconButton type="submit" aria-label="Send" variant="primary" icon={<ArrowUpIcon size={20} weight="bold" />} className="size-12" />
               </motion.span>

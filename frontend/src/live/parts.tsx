@@ -1,4 +1,4 @@
-import { CheckCircleIcon, CircleNotchIcon, ForkKnifeIcon, MinusIcon, PlusIcon, SparkleIcon, StarIcon, ThumbsDownIcon, ThumbsUpIcon, XCircleIcon } from '@phosphor-icons/react'
+import { CheckCircleIcon, CheckIcon, CircleNotchIcon, ForkKnifeIcon, MinusIcon, PlusIcon, SparkleIcon, StarIcon, ThumbsDownIcon, ThumbsUpIcon, XCircleIcon } from '@phosphor-icons/react'
 import { motion } from 'motion/react'
 import { useEffect, useState, type ReactNode } from 'react'
 import { HunchCard } from '../components/chat/Cards'
@@ -7,7 +7,7 @@ import { Chip } from '../components/ui/Chip'
 import { VegMark } from '../components/ui/Meta'
 import { spring } from '../design/motion'
 import { cn } from '../lib/cn'
-import { api, sendCode, verifyCode, type Component, type DishCard, type Menu, type OrderView, type RestaurantCard, type Step } from './api'
+import { api, sendCode, verifyCode, type Area, type Component, type DishCard, type Menu, type OrderView, type RestaurantCard, type Step } from './api'
 
 const inr = (n: number) => `₹${n.toLocaleString('en-IN')}`
 
@@ -33,7 +33,7 @@ export function Pic({ src, className }: { src?: string; className?: string }) {
 export function Steps({ steps }: { steps: Step[] }) {
   if (!steps.length) return null
   return (
-    <ul className="grid gap-1 pl-[34px]" aria-label="What Hunch did">
+    <ul className="grid gap-1" aria-label="What Hunch did">
       {steps.map(s => (
         <motion.li key={s.id} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} className="flex items-start gap-2 text-[13px] leading-5 text-graphite-500">
           {s.status === 'running' ? (
@@ -53,19 +53,24 @@ export function Steps({ steps }: { steps: Step[] }) {
 
 /** The acknowledgement: what Hunch understood, before it went to work. Quieter than the answer. */
 export function Ack({ text }: { text: string }) {
-  if (!text) return null
-  return <p className="pl-[34px] text-[15px] leading-[22px] text-graphite-600">{text}</p>
+  if (!text.trim()) return null
+  return <p className="text-[15px] leading-[22px] text-graphite-600">{text.trim()}</p>
 }
 
 // ---------- components Hunch hands over ----------
 
 export interface Handlers {
   onDish: (d: DishCard) => void
-  onAdd: (id: string, add: number) => Promise<string | null>
+  /** Add to the cart; resolves to an error to show, or null when it worked (the caller confirms it). */
+  onAdd: (dish: { id: string; name: string }, add: number) => Promise<string | null>
   onSay: (text: string) => void
   onCollected: () => void
   onPay: (o: OrderView) => Promise<void>
   onOrder: (o: OrderView) => void
+  /** Orders waiting on the bank after the payment page. */
+  confirming: string[]
+  /** Only the newest turn's questions can still be answered. */
+  latest: boolean
 }
 
 export function ComponentView({ c, h }: { c: Component; h: Handlers }) {
@@ -77,11 +82,11 @@ export function ComponentView({ c, h }: { c: Component; h: Handlers }) {
     case 'menu':
       return <MenuCard m={c.restaurant} onAdd={h.onAdd} />
     case 'choices':
-      return <Choices options={c.options} multi={c.multi} onSay={h.onSay} />
+      return h.latest ? <Choices options={c.options} multi={c.multi} onSay={h.onSay} /> : null
     case 'collect':
       return <Collect c={c} onDone={h.onCollected} />
     case 'checkout':
-      return <Checkout o={c.order} onPay={h.onPay} />
+      return <Checkout o={c.order} onPay={h.onPay} confirming={h.confirming.includes(c.order.id)} />
     case 'order':
       return <OrderCard o={c.order} onChange={h.onOrder} />
   }
@@ -147,7 +152,7 @@ function RestaurantList({ items, onSay }: { items: RestaurantCard[]; onSay: (t: 
   )
 }
 
-function MenuCard({ m, onAdd }: { m: Menu; onAdd: (id: string, add: number) => Promise<string | null> }) {
+function MenuCard({ m, onAdd }: { m: Menu; onAdd: Handlers['onAdd'] }) {
   const [msg, setMsg] = useState<string>()
   return (
     <HunchCard className="gap-3">
@@ -177,16 +182,41 @@ function MenuCard({ m, onAdd }: { m: Menu; onAdd: (id: string, add: number) => P
                     {d.offer && <span className="text-indigo-700"> · {d.offer}</span>}
                   </span>
                 </div>
-                <Button size="sm" variant="secondary" onClick={async () => setMsg((await onAdd(d.id, 1)) ?? `Added ${d.name}`)}>
-                  Add
-                </Button>
+                <AddButton
+                  onAdd={async () => {
+                    const e = await onAdd(d, 1)
+                    setMsg(e ?? undefined)
+                    return !e
+                  }}
+                />
               </div>
             ))}
           </section>
         ))}
       </div>
-      {msg && <p className="text-[13px] text-graphite-600">{msg}</p>}
+      {msg && <p className="text-[13px] text-error">{msg}</p>}
     </HunchCard>
+  )
+}
+
+/** A small Add that shows it worked: a spinner, then a tick for a moment. */
+function AddButton({ onAdd }: { onAdd: () => Promise<boolean> }) {
+  const [state, setState] = useState<'idle' | 'busy' | 'done'>('idle')
+  return (
+    <Button
+      size="sm"
+      variant={state === 'done' ? 'primary' : 'secondary'}
+      disabled={state === 'busy'}
+      className="min-w-[72px]"
+      onClick={async () => {
+        setState('busy')
+        const ok = await onAdd()
+        setState(ok ? 'done' : 'idle')
+        if (ok) setTimeout(() => setState('idle'), 1400)
+      }}
+    >
+      {state === 'busy' ? <CircleNotchIcon size={14} className="animate-spin" /> : state === 'done' ? <CheckIcon size={14} weight="bold" /> : 'Add'}
+    </Button>
   )
 }
 
@@ -195,7 +225,7 @@ function Choices({ options, multi, onSay }: { options: string[]; multi: boolean;
   const [sent, setSent] = useState(false)
   if (sent) return null
   return (
-    <div className="flex flex-wrap gap-2 pl-[34px]">
+    <div className="flex flex-wrap gap-2 pl-[38px]">
       {options.map(o => (
         <Chip
           key={o}
@@ -228,13 +258,6 @@ function Choices({ options, multi, onSay }: { options: string[]; multi: boolean;
 
 // ---------- before money moves ----------
 
-interface Area {
-  id: string
-  name: string
-  city: string
-  campus: boolean
-}
-
 /** Name, phone, where exactly, and a verified email: only what's missing, in one card. */
 function Collect({ c, onDone }: { c: Extract<Component, { kind: 'collect' }>; onDone: () => void }) {
   const need = new Set(c.missing)
@@ -248,10 +271,16 @@ function Collect({ c, onDone }: { c: Extract<Component, { kind: 'collect' }>; on
   const [codeSent, setCodeSent] = useState(false)
   const [err, setErr] = useState<string>()
   const [busy, setBusy] = useState(false)
-  const [done, setDone] = useState(false)
+  const [done, setDone] = useState(!c.missing.length)
 
   useEffect(() => {
-    if (need.has('address')) api<{ areas: Area[] }>('/areas').then(r => setAreas(r.areas))
+    if (!need.has('address')) return
+    api<{ areas: Area[] }>('/areas').then(r => setAreas(r.areas))
+    // Start from where they said they are; only the block and room (or street) is new.
+    api<{ addresses: { area_id: string; is_default: boolean }[] }>('/me').then(r => {
+      const a = r.addresses.find(x => x.is_default) ?? r.addresses[0]
+      if (a) setArea(a.area_id)
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -269,8 +298,19 @@ function Collect({ c, onDone }: { c: Extract<Component, { kind: 'collect' }>; on
         }
         await verifyCode(email.trim(), code.trim())
       }
-      if (need.has('name') || need.has('phone')) await api('/me', { method: 'PATCH', body: { ...(need.has('name') && { name }), ...(need.has('phone') && { phone }) } })
-      if (need.has('address')) await api('/addresses', { method: 'POST', body: { area_id: area, line } })
+      if (need.has('name') || need.has('phone'))
+        await api('/me', {
+          method: 'PATCH',
+          body: {
+            ...(need.has('name') && { name }),
+            ...(need.has('phone') && { phone }),
+          },
+        })
+      if (need.has('address'))
+        await api('/addresses', {
+          method: 'POST',
+          body: { area_id: area, line },
+        })
       setDone(true)
       onDone()
     } catch (e) {
@@ -282,8 +322,8 @@ function Collect({ c, onDone }: { c: Extract<Component, { kind: 'collect' }>; on
 
   if (done) {
     return (
-      <p className="flex items-center gap-2 pl-[34px] text-[14px] text-graphite-600">
-        <CheckCircleIcon size={16} weight="fill" className="text-indigo-500" /> Saved
+      <p className="flex items-center gap-2 pl-[38px] text-[14px] text-graphite-600">
+        <CheckCircleIcon size={16} weight="fill" className="text-indigo-500" /> Details saved
       </p>
     )
   }
@@ -319,10 +359,41 @@ function Collect({ c, onDone }: { c: Extract<Component, { kind: 'collect' }>; on
   )
 }
 
-function Checkout({ o, onPay }: { o: OrderView; onPay: (o: OrderView) => Promise<void> }) {
+function Checkout({ o, onPay, confirming }: { o: OrderView; onPay: (o: OrderView) => Promise<void>; confirming: boolean }) {
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string>()
+  // Back from the payment page restores this card mid-"Opening payment…": let it be tapped again.
+  useEffect(() => {
+    const again = () => setBusy(false)
+    addEventListener('pageshow', again)
+    return () => removeEventListener('pageshow', again)
+  }, [])
   const live = o.status === 'draft' || o.status === 'awaiting_payment'
+  if (o.status === 'placed') {
+    return (
+      <HunchCard>
+        <div className="flex items-center gap-3">
+          <CheckCircleIcon size={24} weight="fill" className="shrink-0 text-indigo-500" />
+          <span className="grid min-w-0">
+            <span className="text-[15px] font-semibold">
+              {o.method === 'cod' ? 'Placed' : 'Paid'} · {inr(o.total)}
+            </span>
+            <span className="truncate text-[13px] text-graphite-500">
+              {o.restaurant} · {o.items.map(i => `${i.qty}× ${i.name}`).join(', ')}
+            </span>
+          </span>
+        </div>
+      </HunchCard>
+    )
+  }
+  if (!live) {
+    return (
+      <HunchCard className="gap-1">
+        <span className="text-[15px] font-semibold text-graphite-500">Your order from {o.restaurant}</span>
+        <span className="text-[13px] text-graphite-500">{o.status === 'cancelled' ? 'Cancelled.' : 'Not paid. A newer checkout replaced this one.'}</span>
+      </HunchCard>
+    )
+  }
   return (
     <HunchCard className="gap-3">
       <span className="text-[15px] font-semibold">Your order from {o.restaurant}</span>
@@ -353,7 +424,12 @@ function Checkout({ o, onPay }: { o: OrderView; onPay: (o: OrderView) => Promise
         <Row label="To pay" value={inr(o.total)} className="text-[15px] font-semibold text-graphite-900" />
       </div>
       {err && <p className="text-[13px] text-error">{err}</p>}
-      {live ? (
+      {confirming ? (
+        <div className="flex h-12 items-center justify-center gap-2 rounded-full bg-indigo-50 text-[15px] font-medium text-indigo-700">
+          <CircleNotchIcon size={18} className="animate-spin" />
+          <span className="text-shimmer">Confirming your payment…</span>
+        </div>
+      ) : (
         <Button
           size="lg"
           block
@@ -371,8 +447,6 @@ function Checkout({ o, onPay }: { o: OrderView; onPay: (o: OrderView) => Promise
         >
           {busy ? 'Opening payment…' : o.method === 'cod' ? `Place order · ${inr(o.total)}` : `Pay ${inr(o.total)}`}
         </Button>
-      ) : (
-        <span className="text-center text-[13px] text-graphite-500">{o.status === 'placed' ? 'Paid' : 'This checkout has expired'}</span>
       )}
       <span className="text-center text-caption font-normal text-graphite-400">{o.method === 'cod' ? 'Cash on delivery' : 'UPI or card · Dodo Payments test mode'}</span>
     </HunchCard>
@@ -387,7 +461,12 @@ const Row = ({ label, value, className }: { label: string; value: string; classN
 )
 
 const STAGES = ['cooking', 'on_the_way', 'near', 'delivered'] as const
-const STAGE_TEXT: Record<string, string> = { cooking: 'is cooking', on_the_way: 'is on its way', near: 'is almost there', delivered: 'was delivered' }
+const STAGE_TEXT: Record<string, string> = {
+  cooking: 'is cooking',
+  on_the_way: 'is on its way',
+  near: 'is almost there',
+  delivered: 'was delivered',
+}
 
 /** The live order: moves with the clock, cancel only while cooking (refund in full), rate once delivered. */
 export function OrderCard({ o, onChange }: { o: OrderView; onChange: (o: OrderView) => void }) {
@@ -403,11 +482,13 @@ export function OrderCard({ o, onChange }: { o: OrderView; onChange: (o: OrderVi
 
   if (o.stage === 'cancelled') {
     return (
-      <HunchCard className="flex-row items-start gap-3">
-        <XCircleIcon size={20} className="mt-0.5 shrink-0 text-graphite-500" />
-        <p className="text-label font-normal text-graphite-700">
-          Cancelled. {o.method === 'online' ? `${inr(o.total)} is on its way back${o.refund_id ? ` (refund ${o.refund_id.slice(-6)})` : ''}, usually in 3–5 days.` : 'Nothing to pay.'}
-        </p>
+      <HunchCard>
+        <div className="flex items-start gap-3">
+          <XCircleIcon size={20} className="mt-0.5 shrink-0 text-graphite-500" />
+          <p className="text-label font-normal text-graphite-700">
+            Cancelled. {o.method === 'online' ? `${inr(o.total)} is on its way back${o.refund_id ? ` (refund ${o.refund_id.slice(-6)})` : ''}, usually in 3–5 days.` : 'Nothing to pay.'}
+          </p>
+        </div>
       </HunchCard>
     )
   }
@@ -419,7 +500,12 @@ export function OrderCard({ o, onChange }: { o: OrderView; onChange: (o: OrderVi
           {o.restaurant} {STAGE_TEXT[o.stage] ?? ''}
         </span>
         <span className="text-[26px] font-semibold leading-8 tracking-[-0.02em] tabular-nums">{o.stage === 'delivered' ? 'Delivered' : o.stage === 'near' ? 'Arriving now' : `${o.eta_left} min`}</span>
-        {o.arrives_at && active && <span className="text-[13px] text-graphite-500">Around {o.arrives_at}{o.handoff ? ` · ${o.handoff}` : ''}</span>}
+        {o.arrives_at && active && (
+          <span className="text-[13px] text-graphite-500">
+            Around {o.arrives_at}
+            {o.handoff ? ` · ${o.handoff}` : ''}
+          </span>
+        )}
       </div>
       <div className="grid grid-cols-4 gap-1">
         {STAGES.map((_, i) => (
@@ -463,7 +549,13 @@ export function OrderCard({ o, onChange }: { o: OrderView; onChange: (o: OrderVi
             <span className="text-label font-normal">How was it?</span>
             <div className="flex gap-2">
               {(['up', 'down'] as const).map(r => (
-                <Button key={r} size="sm" variant="secondary" icon={r === 'up' ? <ThumbsUpIcon size={16} /> : <ThumbsDownIcon size={16} />} onClick={async () => onChange((await api<{ order: OrderView }>(`/orders/${o.id}/rate`, { method: 'POST', body: { rating: r } })).order)}>
+                <Button
+                  key={r}
+                  size="sm"
+                  variant="secondary"
+                  icon={r === 'up' ? <ThumbsUpIcon size={16} /> : <ThumbsDownIcon size={16} />}
+                  onClick={async () => onChange((await api<{ order: OrderView }>(`/orders/${o.id}/rate`, { method: 'POST', body: { rating: r } })).order)}
+                >
                   {r === 'up' ? 'Loved it' : 'Not great'}
                 </Button>
               ))}
@@ -475,9 +567,23 @@ export function OrderCard({ o, onChange }: { o: OrderView; onChange: (o: OrderVi
 }
 
 /** Dish details: why Hunch picked it, what people say, and a quantity to add. */
-export function DishDetail({ d, onAdd }: { d: DishCard; onAdd: (qty: number) => Promise<string | null> }) {
+export function DishDetail({ d, onAdd, onClose }: { d: DishCard; onAdd: (qty: number) => Promise<string | null>; onClose: () => void }) {
   const [qty, setQty] = useState(1)
-  const [msg, setMsg] = useState<string>()
+  const [state, setState] = useState<'idle' | 'busy' | 'done'>('idle')
+  const [err, setErr] = useState<string>()
+  const add = async () => {
+    setState('busy')
+    setErr(undefined)
+    const e = await onAdd(qty)
+    if (e) {
+      setErr(e)
+      setState('idle')
+      return
+    }
+    setState('done')
+    // Long enough to see the tick land, then out of the way.
+    setTimeout(onClose, 750)
+  }
   return (
     <div className="grid gap-4">
       <Pic src={d.photo} className="aspect-[16/10] w-full rounded-[18px]" />
@@ -492,7 +598,7 @@ export function DishDetail({ d, onAdd }: { d: DishCard; onAdd: (qty: number) => 
       <span className="text-[12px] tabular-nums text-graphite-500">
         {d.kcal} kcal · {d.protein_g} g protein
       </span>
-      {msg && <p className="text-[13px] text-graphite-700">{msg}</p>}
+      {err && <p className="rounded-[14px] bg-graphite-50 px-3.5 py-2.5 text-[13px] leading-5 text-graphite-800">{err}</p>}
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-1 rounded-full bg-graphite-50 p-1">
           <button type="button" aria-label="One less" onClick={() => setQty(q => Math.max(1, q - 1))} className="grid size-9 place-items-center rounded-full hover:bg-white">
@@ -503,11 +609,32 @@ export function DishDetail({ d, onAdd }: { d: DishCard; onAdd: (qty: number) => 
             <PlusIcon size={16} />
           </button>
         </div>
-        <Button size="lg" className="flex-1" disabled={!d.open} onClick={async () => setMsg((await onAdd(qty)) ?? 'Added to your cart')}>
-          {d.open ? `Add · ${inr(d.price * qty)}` : d.opens}
+        <Button size="lg" className={cn('flex-1', state === 'done' && 'bg-indigo-600 hover:bg-indigo-600')} disabled={!d.open} aria-busy={state === 'busy'} onClick={() => state === 'idle' && add()}>
+          <AnimatePresenceSwap k={state}>
+            {state === 'busy' ? (
+              <CircleNotchIcon size={20} className="animate-spin" />
+            ) : state === 'done' ? (
+              <span className="inline-flex items-center gap-2">
+                <CheckIcon size={18} weight="bold" /> Added to cart
+              </span>
+            ) : d.open ? (
+              `Add · ${inr(d.price * qty)}`
+            ) : (
+              d.opens
+            )}
+          </AnimatePresenceSwap>
         </Button>
       </div>
     </div>
+  )
+}
+
+/** Cross-fades a button's label when its state changes. */
+function AnimatePresenceSwap({ k, children }: { k: string; children: ReactNode }) {
+  return (
+    <motion.span key={k} initial={{ opacity: 0, y: 6, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={spring.snappy} className="inline-flex items-center">
+      {children}
+    </motion.span>
   )
 }
 
