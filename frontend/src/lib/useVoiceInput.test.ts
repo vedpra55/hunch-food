@@ -11,3 +11,4 @@ describe('useVoiceInput module', () => {
     expect(typeof useVoiceInput).toBe('function')
   })
 })
+
