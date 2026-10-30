@@ -169,15 +169,15 @@ export function ArchitectureSection() {
 
           <motion.img
             layoutId="system-design-diagram"
-            src="/hunch-system-architecture.png"
+            src="/hunch-architecture-hd.png"
             onError={(e) => {
               if (e.currentTarget.src !== ARCHITECTURE_IMG_URL) {
                 e.currentTarget.src = ARCHITECTURE_IMG_URL
               }
             }}
             alt="The Architecture behind Hunch"
-            width={1024}
-            height={704}
+            width={3200}
+            height={2200}
             className="w-full h-auto rounded-[18px] object-contain block"
             style={{ borderRadius: '18px' }}
             decoding="async"
@@ -200,15 +200,15 @@ export function ArchitectureSection() {
               <motion.img
                 layoutId="system-design-diagram"
                 transition={spring.soft}
-                src="/hunch-system-architecture.png"
+                src="/hunch-architecture-hd.png"
                 onError={(e) => {
                   if (e.currentTarget.src !== ARCHITECTURE_IMG_URL) {
                     e.currentTarget.src = ARCHITECTURE_IMG_URL
                   }
                 }}
                 alt="The Architecture behind Hunch (Expanded)"
-                width={1024}
-                height={704}
+                width={3200}
+                height={2200}
                 className="w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl"
               />
               <span className="mt-4 text-xs font-mono text-white/60">
