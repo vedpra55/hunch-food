@@ -128,25 +128,25 @@ export function ArchitectureSection() {
           })}
         </div>
 
-        {/* The Diagram with Clip-Path Wipe (inset 0 0 100% 0 -> inset 0) + Zoom Trigger */}
+        {/* The Diagram with Smooth Reveal + Zoom Trigger */}
         <motion.div
           initial={
             shouldReduceMotion
               ? { opacity: 0 }
               : {
-                  clipPath: 'inset(0% 0% 100% 0%)',
-                  scale: 0.98,
                   opacity: 0,
+                  y: 24,
+                  scale: 0.98,
                 }
           }
           whileInView={{
-            clipPath: 'inset(0% 0% 0% 0%)',
-            scale: 1,
             opacity: 1,
+            y: 0,
+            scale: 1,
           }}
-          viewport={{ once: true, amount: 0.2 }}
+          viewport={{ once: true, amount: 0.15 }}
           transition={{
-            duration: 0.9,
+            duration: 0.8,
             ease: easeOut,
           }}
           style={{ borderRadius: '24px' }}
@@ -169,13 +169,18 @@ export function ArchitectureSection() {
 
           <motion.img
             layoutId="system-design-diagram"
-            src={ARCHITECTURE_IMG_URL}
+            src="/hunch-system-architecture.png"
+            onError={(e) => {
+              if (e.currentTarget.src !== ARCHITECTURE_IMG_URL) {
+                e.currentTarget.src = ARCHITECTURE_IMG_URL
+              }
+            }}
             alt="The Architecture behind Hunch"
             width={1024}
             height={704}
             className="w-full h-auto rounded-[18px] object-contain block"
             style={{ borderRadius: '18px' }}
-            loading="lazy"
+            decoding="async"
           />
         </motion.div>
       </div>
@@ -195,7 +200,12 @@ export function ArchitectureSection() {
               <motion.img
                 layoutId="system-design-diagram"
                 transition={spring.soft}
-                src={ARCHITECTURE_IMG_URL}
+                src="/hunch-system-architecture.png"
+                onError={(e) => {
+                  if (e.currentTarget.src !== ARCHITECTURE_IMG_URL) {
+                    e.currentTarget.src = ARCHITECTURE_IMG_URL
+                  }
+                }}
                 alt="The Architecture behind Hunch (Expanded)"
                 width={1024}
                 height={704}
