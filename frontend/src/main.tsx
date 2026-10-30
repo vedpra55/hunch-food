@@ -6,21 +6,47 @@ import './styles/index.css'
 
 import { IconContext } from '@phosphor-icons/react'
 import { MotionConfig } from 'motion/react'
-import { StrictMode } from 'react'
+import { StrictMode, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { LIVE } from './live/api'
 import { LiveHome } from './live/LiveHome'
 import { Home } from './pages/Home'
+import { Landing } from './pages/Landing'
 import { Playground } from './pages/Playground'
 
-// Live (real agent, VITE_API_URL set) or the offline demo (?demo, or no API configured).
-const Page = location.pathname.startsWith('/playground') ? Playground : LIVE ? LiveHome : Home
+export function Root() {
+  const isPlayground = location.pathname.startsWith('/playground')
+  const initialApp = location.search.includes('app') || location.pathname.startsWith('/app')
+  const [showApp, setShowApp] = useState(initialApp)
+
+  useEffect(() => {
+    const onPop = () => setShowApp(location.search.includes('app') || location.pathname.startsWith('/app'))
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
+
+  const startApp = () => {
+    const url = new URL(window.location.href)
+    url.searchParams.set('app', '1')
+    window.history.pushState({}, '', url.toString())
+    setShowApp(true)
+  }
+
+  if (isPlayground) return <Playground />
+
+  if (showApp) {
+    const AppView = LIVE ? LiveHome : Home
+    return <AppView />
+  }
+
+  return <Landing onStartApp={startApp} />
+}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <MotionConfig reducedMotion="user">
       <IconContext.Provider value={{ size: 20, weight: 'regular' }}>
-        <Page />
+        <Root />
       </IconContext.Provider>
     </MotionConfig>
   </StrictMode>,
