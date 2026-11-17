@@ -45,6 +45,14 @@ class VoiceTranscriptionTest(TestCase):
         text = transcribe_audio(audio_bytes, 'audio/webm')
         self.assertEqual(text, 'Butter chicken and 2 garlic naan')
 
+    @patch('agent.voice.transcribe_google_stt', side_effect=RuntimeError("Google STT down"))
+    @patch('agent.voice.transcribe_gemini', return_value='Paneer momos please')
+    def test_transcribe_audio_gemini_fallback(self, mock_gemini, mock_stt):
+        audio_bytes = b'fake-audio-data' * 50
+        text = transcribe_audio(audio_bytes, 'audio/webm')
+        self.assertEqual(text, 'Paneer momos please')
+        mock_gemini.assert_called_once_with(audio_bytes, 'audio/webm')
+
     @patch('agent.views.transcribe_audio')
     def test_view_file_upload(self, mock_transcribe):
         mock_transcribe.return_value = 'Momos near Law Gate'

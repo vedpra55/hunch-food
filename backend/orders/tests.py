@@ -27,7 +27,9 @@ def open_all_kitchens():
 class Base(TestCase):
     @classmethod
     def setUpTestData(cls):
-        call_command('seed', stdout=open('/dev/null', 'w'))
+        from catalog.models import Dish
+        if not Dish.objects.exists():
+            call_command('seed', stdout=open('/dev/null', 'w'))
 
     def setUp(self):
         self.patches = [p.start() for p in open_all_kitchens()]
@@ -157,7 +159,9 @@ class PaymentSyncTests(Base):
     def setUp(self):
         super().setUp()
         from django.core.cache import cache
+        from agent.models import Message
         cache.clear()
+        Message.objects.filter(role='event').delete()
 
     def test_paid_order_is_placed_on_read(self):
         o = self.awaiting()

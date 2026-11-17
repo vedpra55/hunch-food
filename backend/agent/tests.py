@@ -18,29 +18,31 @@ from .models import AgentRun, Message
 from .thread import current_conversation, transcript
 
 
-def ev(type, **kw):
-    return NS(type=type, **kw)
+def ev(event_type, **kw):
+    return NS(event_type=event_type, **kw)
 
 
 def call(name: str, args: dict, i: int) -> list:
     """A function call as the stream delivers it; the reply's arguments arrive in small pieces."""
-    item = NS(type='function_call', name=name, arguments=json.dumps(args), call_id=f'c{i}')
+    step = NS(type='function_call', name=name, id=f'c{i}')
     raw = json.dumps(args)
     pieces = [raw[k:k + 7] for k in range(0, len(raw), 7)]
-    return ([ev('response.output_item.added', item=item, output_index=i)]
-            + [ev('response.function_call_arguments.delta', delta=p, output_index=i) for p in pieces]
-            + [ev('response.output_item.done', item=item, output_index=i)])
+    return ([ev('step.start', index=i, step=step)]
+            + [ev('step.delta', index=i, delta=NS(type='arguments_delta', arguments=p)) for p in pieces]
+            + [ev('step.stop', index=i)])
 
 
 def round_(ack: str = '', calls: list = (), rid: str = 'r') -> list:
-    out = [ev('response.output_text.delta', delta=w + ' ') for w in ack.split()] if ack else []
+    out = [ev('interaction.created', interaction=NS(id=rid))]
+    if ack:
+        out += [ev('step.delta', index=0, delta=NS(type='text', text=w + ' ')) for w in ack.split()]
     for i, (name, args) in enumerate(calls):
         out += call(name, args, i + 1)
-    usage = NS(input_tokens=100, output_tokens=20, input_tokens_details=NS(cached_tokens=60))
-    return out + [ev('response.completed', response=NS(id=rid, usage=usage))]
+    usage = NS(total_input_tokens=100, total_output_tokens=20, total_cached_tokens=60)
+    return out + [ev('interaction.completed', interaction=NS(id=rid, status='requires_action', usage=usage))]
 
 
-class FakeModel:
+class FakeInteractions:
     """Plays back one scripted round per request and records what each request sent."""
 
     def __init__(self, rounds: list):
@@ -69,17 +71,21 @@ SEARCH = ('search_food', {'query': 'momos', 'max_price': 150, 'veg_only': None, 
 class LoopTests(TestCase):
     @classmethod
     def setUpTestData(cls):
-        call_command('seed', stdout=open('/dev/null', 'w'))
+        from catalog.models import Dish
+        if not Dish.objects.exists():
+            call_command('seed', stdout=open('/dev/null', 'w'))
 
     def setUp(self):
+        Message.objects.all().delete()
+        AgentRun.objects.all().delete()
         self.p = Person.objects.create(guest_id='g1', name='Ved', onboarded=True)
         patcher = mock.patch('catalog.search.is_open', return_value=True)
         patcher.start()
         self.addCleanup(patcher.stop)
 
     def turn(self, rounds, text='spicy momos under 150', turn_id='t1'):
-        fake = FakeModel(rounds)
-        client = NS(responses=fake)
+        fake = FakeInteractions(rounds)
+        client = NS(aio=NS(interactions=fake))
         with mock.patch.object(loop, 'client', return_value=client):
             async def collect():
                 return [e async for e in loop.run_turn(self.p.id, text, turn_id)]
@@ -111,9 +117,9 @@ class LoopTests(TestCase):
         self.assertEqual(m['components'][0]['kind'], 'dishes')
         self.assertEqual(m['steps'][0]['summary'][:5], 'Found')
         # Rounds in a turn are chained; the turn itself starts fresh with our own transcript.
-        self.assertIsNone(fake.requests[0]['previous_response_id'])
-        self.assertEqual(fake.requests[1]['previous_response_id'], 'r1')
-        self.assertEqual(fake.requests[0]['input'][-1], {'role': 'user', 'content': 'spicy momos under 150'})
+        self.assertIsNone(fake.requests[0]['previous_interaction_id'])
+        self.assertEqual(fake.requests[1]['previous_interaction_id'], 'r1')
+        self.assertIn('spicy momos under 150', fake.requests[0]['input'])
         self.assertEqual(AgentRun.objects.get().cached_tokens, 120)
 
     def test_small_talk_is_one_round(self):
@@ -131,7 +137,8 @@ class LoopTests(TestCase):
         ])
         self.assertIn('say_reset', [e['type'] for e in events])
         self.assertEqual(events[-1]['message']['text'], 'These, then.')
-        self.assertIn('None of those dish ids', fake.requests[2]['input'][0]['output'])
+        output_str = fake.requests[2]['input'][0]['result']['content'][0]['text']
+        self.assertIn('None of those dish ids', output_str)
 
     def test_failure_leaves_the_thread_as_it_was(self):
         events, _ = self.turn([round_('Checking.', [SEARCH])])  # then the model goes away
@@ -146,9 +153,8 @@ class LoopTests(TestCase):
         self.client.post('/api/cart', json.dumps({'dish_id': ids[0], 'add': 1}), content_type='application/json', HTTP_X_GUEST_ID='g1')
         _, fake = self.turn([round_('', [reply('Done.')])], text='and a coke', turn_id='t2')
         sent = fake.requests[0]['input']
-        self.assertIn(ids[0], sent[1]['content'])  # what Hunch showed, with ids
-        self.assertEqual(sent[2]['role'], 'developer')
-        self.assertIn('Added 1×', sent[2]['content'])
+        self.assertIn(ids[0], sent)  # what Hunch showed, with ids
+        self.assertIn('Added 1×', sent)
 
     def test_checkout_reply_without_details_shows_the_form(self):
         add(self.p, self.momo_ids()[0])
@@ -191,7 +197,9 @@ class ChatViewTests(TestCase):
 class SetupAndNotesTests(TestCase):
     @classmethod
     def setUpTestData(cls):
-        call_command('seed', stdout=open('/dev/null', 'w'))
+        from catalog.models import Dish
+        if not Dish.objects.exists():
+            call_command('seed', stdout=open('/dev/null', 'w'))
 
     def test_onboarding_saves_everything_and_marks_the_thread(self):
         r = self.client.post('/api/onboarding', json.dumps({'name': 'Ved', 'area_id': 'phg-gt-road', 'diet': 'veg', 'allergies': ['nuts', 'bogus']}),

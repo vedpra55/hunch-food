@@ -9,7 +9,7 @@ jobs: order status moves with the clock, and payments are checked with Dodo when
 ```bash
 python -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env            # fill OPENAI_API_KEY, DODO_PAYMENTS_API_KEY, DATABASE_URL
+cp .env.example .env            # fill GEMINI_API_KEY, DODO_PAYMENTS_API_KEY, DATABASE_URL
 python manage.py migrate
 python manage.py seed --embed   # 14 areas · 34 kitchens · 357 dishes · ~1,600 reviews · 71 offers (~$0.001 of embeddings)
 uvicorn hunch.asgi:application --port 8000
@@ -37,7 +37,7 @@ cards are stored as references and drawn from the database each time, so a paid 
 
 ## How a turn works (`agent/loop.py`)
 
-1. **Fresh input every turn:** the fixed rules (`agent/prompt.py`, cached by OpenAI), this moment's context
+1. **Fresh input every turn:** the fixed rules (`agent/prompt.py`), this moment's context
    (time, place, rules, tastes, cart, orders, what's missing), and the last 14 entries of the thread, with
    what each turn showed (dish ids included) and the app events. Nothing is chained across turns, so a failed
    or stopped turn can't break the next one.
@@ -57,7 +57,7 @@ Safety lives in code, not the prompt: diet, allergies and veg days are filtered 
 cart; one kitchen per order; totals are computed on the server; the agent can prepare a checkout but
 never pay, cancel or refund (those are the person's taps).
 
-Model: `gpt-6-luna`; embeddings `text-embedding-3-small` at 512 dimensions. `AgentRun` logs rounds, tools,
+Model: `gemini-3.5-flash-lite`; embeddings `gemini-embedding-001` at 512 dimensions. `AgentRun` logs rounds, tools,
 tokens (and cached tokens) and time for every turn.
 
 ## Memory

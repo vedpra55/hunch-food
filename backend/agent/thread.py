@@ -129,3 +129,22 @@ def transcript(conv: Conversation) -> list[dict]:
         else:
             items.append({'role': 'developer', 'content': f'[In the app, not said by anyone] {m.text}'})
     return items
+
+
+def transcript_text(conv: Conversation) -> str:
+    """The recent thread formatted as readable dialogue for Gemini."""
+    items = transcript(conv)
+    if not items:
+        return ""
+    lines = []
+    for it in items:
+        role = it['role']
+        content = it['content']
+        if role == 'user':
+            lines.append(f"User: {content}")
+        elif role == 'assistant':
+            lines.append(f"Hunch: {content}")
+        else:
+            lines.append(f"{content}")
+    return '\n'.join(lines)
+

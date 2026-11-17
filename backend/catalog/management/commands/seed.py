@@ -23,10 +23,16 @@ class Command(BaseCommand):
     help = 'Rebuild the Jalandhar–Phagwara–LPU catalogue (areas, kitchens, dishes, reviews, offers).'
 
     def add_arguments(self, parser):
-        parser.add_argument('--embed', action='store_true', help='Also compute embeddings (calls OpenAI, ~40k tokens).')
+        parser.add_argument('--embed', action='store_true', help='Also compute embeddings (calls Gemini).')
 
     @transaction.atomic
     def handle(self, *args, embed=False, **opts):
+        from accounts.models import Address
+        from orders.models import CartLine, Order, OrderItem
+        Address.objects.all().delete()
+        CartLine.objects.all().delete()
+        OrderItem.objects.all().delete()
+        Order.objects.all().delete()
         Offer.objects.all().delete()
         Review.objects.all().delete()
         Dish.objects.all().delete()
