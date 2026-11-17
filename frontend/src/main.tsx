@@ -16,11 +16,15 @@ import { Playground } from './pages/Playground'
 
 export function Root() {
   const isPlayground = location.pathname.startsWith('/playground')
-  const initialApp = location.search.includes('app') || location.pathname.startsWith('/app')
-  const [showApp, setShowApp] = useState(initialApp)
+  const isAppUrl = () =>
+    location.search.includes('app') ||
+    location.search.includes('order') ||
+    location.pathname.startsWith('/app')
+
+  const [showApp, setShowApp] = useState(isAppUrl)
 
   useEffect(() => {
-    const onPop = () => setShowApp(location.search.includes('app') || location.pathname.startsWith('/app'))
+    const onPop = () => setShowApp(isAppUrl())
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
   }, [])

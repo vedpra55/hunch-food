@@ -83,7 +83,7 @@ function Main({ h }: { h: HunchApi }) {
   useEffect(() => {
     const id = new URLSearchParams(location.search).get('order')
     if (!id) return
-    history.replaceState(null, '', location.pathname)
+    history.replaceState(null, '', '/?app=1')
     void confirmPayment(id)
   }, [confirmPayment])
 

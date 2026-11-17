@@ -41,7 +41,7 @@ def start_checkout(o: Order, email: str) -> str:
         billing_currency='INR',
         billing_address={'country': 'IN', 'city': 'Phagwara', 'state': 'Punjab', 'street': o.address_line[:100], 'zipcode': '144411'},
         minimal_address=True,
-        return_url=f'{settings.FRONTEND_URL}/?order={o.id}',
+        return_url=f'{settings.FRONTEND_URL}/?app=1&order={o.id}',
         metadata={'order_id': str(o.id)},
         customization={'theme': 'light', 'show_order_details': True},
     )
