@@ -40,8 +40,7 @@ def fn(name: str, description: str, props: dict) -> dict:
         'type': 'function',
         'name': name,
         'description': description,
-        'strict': True,
-        'parameters': {'type': 'object', 'properties': props, 'required': list(props), 'additionalProperties': False},
+        'parameters': {'type': 'object', 'properties': props, 'required': list(props)},
     }
 
 

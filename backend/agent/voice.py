@@ -3,8 +3,7 @@ Voice transcription for Hunch:
 1. Google Cloud Speech-to-Text API (v1 / speech.googleapis.com) with automatic language detection:
    Indian English (en-IN), Hindi (hi-IN), Punjabi (pa-Guru-IN).
    Free tier: 60 minutes/month free on GCP hunch-food-5921.
-2. OpenAI Whisper (whisper-1) fallback using the configured OPENAI_API_KEY.
-3. Gemini 3.8 Flash fallback if GEMINI_API_KEY is configured and active.
+2. Gemini API fallback using GEMINI_API_KEY (gemini-3.5-flash-lite).
 """
 
 import base64
@@ -103,28 +102,42 @@ def transcribe_google_stt(audio_bytes: bytes, mime_type: str) -> str:
     return ' '.join(transcripts).strip()
 
 
-def transcribe_whisper(audio_bytes: bytes, mime_type: str) -> str:
-    """Transcribe using OpenAI Whisper API."""
-    from openai import OpenAI
+def transcribe_gemini(audio_bytes: bytes, mime_type: str) -> str:
+    """Transcribe using Gemini API with language understanding."""
+    import truststore
+    truststore.inject_into_ssl()
+    from google import genai
+    from google.genai import types
 
-    key = getattr(settings, 'OPENAI_API_KEY', '')
+    key = getattr(settings, 'GEMINI_API_KEY', '')
     if not key:
-        raise RuntimeError("OPENAI_API_KEY is not set.")
+        raise RuntimeError("GEMINI_API_KEY is not set.")
 
-    client = OpenAI(api_key=key)
-    f = io.BytesIO(audio_bytes)
-    ext = 'webm' if 'webm' in mime_type else 'mp4' if 'mp4' in mime_type else 'wav'
-    f.name = f"voice.{ext}"
-
-    res = client.audio.transcriptions.create(model="whisper-1", file=f)
-    return res.text.strip()
+    client = genai.Client(
+        api_key=key,
+        http_options=types.HttpOptions(
+            client_args={'verify': False},
+            async_client_args={'verify': False},
+        ),
+    )
+    clean_mime = mime_type.lower().split(';')[0].strip() or 'audio/webm'
+    part = types.Part.from_bytes(data=audio_bytes, mime_type=clean_mime)
+    model_name = getattr(settings, 'GEMINI_TRANSCRIBE_MODEL', 'gemini-3.5-flash-lite')
+    res = client.models.generate_content(
+        model=model_name,
+        contents=[
+            part,
+            "Transcribe this audio exactly as spoken in English, Hindi, or Punjabi (romanized or in the spoken language). Return only the exact transcription text, nothing else.",
+        ],
+    )
+    return (res.text or '').strip()
 
 
 def transcribe_audio(audio_bytes: bytes, mime_type: str = "audio/webm") -> str:
     """
     Main transcription entry point:
     1. Tries Google Cloud Speech-to-Text with auto-detection for Indian English / Hindi / Punjabi.
-    2. Falls back to OpenAI Whisper.
+    2. Falls back to Gemini.
     """
     if not audio_bytes or len(audio_bytes) < 400:
         return ""
@@ -135,11 +148,11 @@ def transcribe_audio(audio_bytes: bytes, mime_type: str = "audio/webm") -> str:
         if text:
             return text
     except Exception as e:
-        log.warning("Google STT failed, falling back to Whisper: %s", e)
+        log.warning("Google STT failed, falling back to Gemini: %s", e)
 
-    # 2. Fallback to OpenAI Whisper
+    # 2. Fallback to Gemini
     try:
-        return transcribe_whisper(audio_bytes, mime_type)
+        return transcribe_gemini(audio_bytes, mime_type)
     except Exception as e:
-        log.error("Whisper transcription failed: %s", e)
+        log.error("Gemini transcription failed: %s", e)
         raise RuntimeError(f"Transcription failed: {e}") from e

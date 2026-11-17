@@ -56,6 +56,7 @@ def database_from_url(url: str) -> dict:
         'PORT': str(port),
         'OPTIONS': q,
         'CONN_MAX_AGE': 0 if port == 6543 else 60,
+        'TEST': {'NAME': u.path.lstrip('/') or 'postgres'},
     }
 
 
@@ -70,13 +71,11 @@ CORS_ALLOWED_ORIGINS = [o for o in env('CORS_ORIGINS', env('FRONTEND_URL', 'http
 CORS_ALLOW_HEADERS = ['authorization', 'content-type', 'x-guest-id', 'x-dev-email', 'x-turn-id']
 
 # --- Hunch ---
-OPENAI_API_KEY = env('OPENAI_API_KEY') or env('OPENAI_KEY')
-# One small model everywhere while testing: cost stays low.
-OPENAI_MODEL = env('OPENAI_MODEL', 'gpt-6-luna')
-OPENAI_EMBED_MODEL = env('OPENAI_EMBED_MODEL', 'text-embedding-3-small')
-EMBED_DIMS = 512
 GEMINI_API_KEY = env('GEMINI_API_KEY') or env('GOOGLE_API_KEY')
-GEMINI_MODEL = env('GEMINI_MODEL', 'gemini-2.0-flash')
+GEMINI_MODEL = env('GEMINI_MODEL', 'gemini-3.5-flash-lite')
+GEMINI_EMBED_MODEL = env('GEMINI_EMBED_MODEL', 'gemini-embedding-001')
+GEMINI_TRANSCRIBE_MODEL = env('GEMINI_TRANSCRIBE_MODEL', 'gemini-3.5-flash-lite')
+EMBED_DIMS = 512
 
 SUPABASE_URL = env('SUPABASE_URL')
 SUPABASE_ANON_KEY = env('SUPABASE_ANON_KEY')

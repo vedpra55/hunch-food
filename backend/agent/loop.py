@@ -11,7 +11,7 @@ Events (server-sent, one JSON each): ack, step, say, cart, profile, done, error.
 what a reload shows are the same thing.
 
 Each turn starts clean: instructions (fixed rules, then this moment's context) plus the recent thread
-from our database. Rounds within a turn are chained by response id; nothing carries across turns, so
+from our database. Rounds within a turn are chained by response/interaction id; nothing carries across turns, so
 a failed or stopped turn can't break the next one.
 """
 
@@ -21,30 +21,41 @@ import logging
 import time
 from typing import AsyncIterator
 
+import truststore
+truststore.inject_into_ssl()
+
+import httpx
 from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.utils import timezone
-from openai import AsyncOpenAI
+from google import genai
+from google.genai import types
 
 from accounts.models import Person
 from orders.payments import sync_all
 from orders.services import cart_view
 from .models import AgentRun, Conversation, Message
 from .prompt import SYSTEM, context
-from .thread import current_conversation, message_view, transcript
+from .thread import current_conversation, message_view, transcript_text
 from .tools import TOOLS, Toolbox, dumps
 
 log = logging.getLogger('hunch')
 MAX_ROUNDS = 5
 SORRY = "Something went wrong on my side. Try that again?"
 
-_client: AsyncOpenAI | None = None
+_async_http_client = httpx.AsyncClient(verify=False, timeout=45.0)
+_client: genai.Client | None = None
 
 
-def client() -> AsyncOpenAI:
+def client() -> genai.Client:
     global _client
     if _client is None:
-        _client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY, timeout=45, max_retries=1)
+        _client = genai.Client(
+            api_key=settings.GEMINI_API_KEY,
+            http_options=types.HttpOptions(
+                httpx_async_client=_async_http_client,
+            ),
+        )
     return _client
 
 
@@ -107,7 +118,9 @@ async def run_turn(person_id, text: str, turn_id: str = '') -> AsyncIterator[dic
     # Payments first: the agent should never talk about an order whose payment we haven't checked.
     await sync_to_async(sync_all)(p)
     instructions = SYSTEM + '\n' + await sync_to_async(context)(p)
-    model_input = await sync_to_async(transcript)(conv)
+    model_input = await sync_to_async(transcript_text)(conv)
+    if not model_input:
+        model_input = user_text
 
     ack_parts: list[str] = []
     steps: list[dict] = []
@@ -118,64 +131,89 @@ async def run_turn(person_id, text: str, turn_id: str = '') -> AsyncIterator[dic
 
     try:
         for rounds in range(1, MAX_ROUNDS + 1):
-            stream = await client().responses.create(
-                model=settings.OPENAI_MODEL,
-                instructions=instructions,
-                input=model_input,
-                previous_response_id=previous,
+            stream = await client().aio.interactions.create(
+                model=settings.GEMINI_MODEL,
+                system_instruction=instructions,
                 tools=TOOLS,
-                tool_choice='required',
-                parallel_tool_calls=True,
-                reasoning={'effort': 'low'},
-                max_output_tokens=1500,
-                store=True,
+                input=model_input,
+                previous_interaction_id=previous,
                 stream=True,
             )
-            ack_now, calls, response = '', [], None
-            replies: dict[int, SayStream] = {}
+            ack_now = ''
+            call_by_index: dict[int, dict] = {}
+            reply_index: int | None = None
+            reply_stream = SayStream()
+            interaction_id = None
+            usage_info = None
+
             async for e in stream:
-                if e.type == 'response.output_text.delta':
-                    ack_now += e.delta
-                    yield {'type': 'ack', 'delta': e.delta}
-                elif e.type == 'response.output_item.added' and e.item.type == 'function_call' and e.item.name == 'reply':
-                    replies[e.output_index] = SayStream()
-                elif e.type == 'response.function_call_arguments.delta' and e.output_index in replies:
-                    if new := replies[e.output_index].feed(e.delta):
-                        yield {'type': 'say', 'delta': new}
-                elif e.type == 'response.output_item.done' and e.item.type == 'function_call':
-                    calls.append(e.item)
-                elif e.type == 'response.completed':
-                    response = e.response
-            if response is None:
-                raise RuntimeError('The model stream ended early')
-            previous = response.id
-            if response.usage:
-                usage['in'] += response.usage.input_tokens
-                usage['out'] += response.usage.output_tokens
-                details = getattr(response.usage, 'input_tokens_details', None)
-                usage['cached'] += getattr(details, 'cached_tokens', 0) or 0
+                et = e.event_type
+                if et == 'interaction.created':
+                    interaction_id = e.interaction.id
+                elif et == 'step.start':
+                    idx = getattr(e, 'index', len(call_by_index))
+                    step = e.step
+                    if step.type == 'function_call':
+                        call_info = {'id': getattr(step, 'id', f'c{idx}'), 'name': getattr(step, 'name', ''), 'arguments': ''}
+                        call_by_index[idx] = call_info
+                        if call_info['name'] == 'reply':
+                            reply_index = idx
+                elif et == 'step.delta':
+                    idx = getattr(e, 'index', 0)
+                    delta = e.delta
+                    if delta.type == 'text':
+                        text_piece = delta.text or ''
+                        ack_now += text_piece
+                        yield {'type': 'ack', 'delta': text_piece}
+                    elif delta.type == 'arguments_delta':
+                        args_piece = delta.arguments or ''
+                        if idx in call_by_index:
+                            call_by_index[idx]['arguments'] += args_piece
+                        if idx == reply_index:
+                            if new := reply_stream.feed(args_piece):
+                                yield {'type': 'say', 'delta': new}
+                elif et == 'step.stop':
+                    pass
+                elif et == 'interaction.completed':
+                    usage_info = getattr(e.interaction, 'usage', None)
+
+            if interaction_id:
+                previous = interaction_id
+            if usage_info:
+                usage['in'] += getattr(usage_info, 'total_input_tokens', 0) or getattr(usage_info, 'input_tokens', 0) or 0
+                usage['out'] += getattr(usage_info, 'total_output_tokens', 0) or getattr(usage_info, 'output_tokens', 0) or 0
+                usage['cached'] += getattr(usage_info, 'total_cached_tokens', 0) or 0
             if ack_now.strip():
                 ack_parts.append(ack_now.strip())
 
+            calls = list(call_by_index.values())
+            if not calls and not ack_now and not interaction_id:
+                raise RuntimeError('The model stream ended early')
+
             outputs = []
             # Work first, the reply last, so the reply can show what the work found.
-            for c in sorted(calls, key=lambda c: c.name == 'reply'):
-                args = json.loads(c.arguments or '{}')
-                used.append(c.name)
-                label = await sync_to_async(box.label)(c.name, args)
+            for c in sorted(calls, key=lambda c: c['name'] == 'reply'):
+                args = json.loads(c['arguments'] or '{}')
+                used.append(c['name'])
+                label = await sync_to_async(box.label)(c['name'], args)
                 sid = f's{len(steps) + 1}'
                 if label:
                     yield {'type': 'step', 'id': sid, 'label': label, 'status': 'running'}
-                res = await sync_to_async(box.run)(c.name, args)
+                res = await sync_to_async(box.run)(c['name'], args)
                 for ev in res.events:
                     yield ev
                 if label:
                     steps.append({'id': sid, 'label': label, 'summary': res.summary})
                     yield {'type': 'step', 'id': sid, 'label': label, 'status': 'done', 'summary': res.summary}
-                outputs.append({'type': 'function_call_output', 'call_id': c.call_id, 'output': dumps(res.output)})
+                outputs.append({
+                    'type': 'function_result',
+                    'call_id': c['id'],
+                    'name': c['name'],
+                    'result': {'content': [{'type': 'text', 'text': dumps(res.output)}]},
+                })
             if box.final:
                 break
-            if any(c.name == 'reply' for c in calls):
+            if any(c['name'] == 'reply' for c in calls):
                 # The reply couldn't be shown (a bad id, an empty cart): its words are void; the model fixes it.
                 yield {'type': 'say_reset'}
             model_input = outputs
@@ -216,7 +254,7 @@ def _fallback(box: Toolbox, ack_parts: list[str], stopped: bool) -> dict:
 
 def _log(conv: Conversation, rounds: int, used: list, usage: dict, started: float, error: str) -> None:
     AgentRun.objects.create(
-        conversation=conv, model=settings.OPENAI_MODEL, rounds=rounds, tools=used, input_tokens=usage['in'],
+        conversation=conv, model=settings.GEMINI_MODEL, rounds=rounds, tools=used, input_tokens=usage['in'],
         cached_tokens=usage['cached'], output_tokens=usage['out'], ms=int((time.monotonic() - started) * 1000), error=error,
     )
 
